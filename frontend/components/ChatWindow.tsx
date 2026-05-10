@@ -26,7 +26,7 @@ export function ChatWindow({ messages, isTyping }: ChatWindowProps) {
                 <span>{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
               <div
-                className="prose prose-invert prose-p:text-slate-200 prose-a:text-accent prose-pre:bg-slate-900 prose-code:bg-slate-900 prose-code:px-1 prose-code:rounded"
+                className="markdown-body text-slate-200"
                 dangerouslySetInnerHTML={renderMarkdown(message.content)}
               />
             </div>

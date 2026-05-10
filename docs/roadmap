@@ -1,0 +1,46 @@
+# Main Features Roadmap
+
+# Phase 1 — Foundation Setup
+
+Goal:
+Create a functional local AI chat system.
+
+Features:
+* Chat UI
+* Ollama integration
+* Streaming responses
+* Basic backend API
+* Conversation history
+* Markdown rendering
+
+
+# Phase 2 — Memory System
+Features:
+* Semantic memory
+* Embedding generation
+* Conversation summarization
+* Persistent chat sessions
+
+
+# Phase 3 — RAG System
+Features:
+* PDF uploads
+* Document chunking
+* Embeddings
+* Semantic retrieval
+* Context injection
+
+# Phase 4 — AI Tools
+Features:
+* File search
+* Folder summarization
+* Tool calling
+* Local automation
+
+# Phase 5 — Advanced Features
+Features:
+* Voice input
+* Desktop app
+* AI agents
+* Multi-workspace support
+* Plugin system

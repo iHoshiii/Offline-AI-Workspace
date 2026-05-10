@@ -1,0 +1,18 @@
+# Node and Next
+node_modules/
+.next/
+out/
+.env*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+venv/
+.env*
+backend/data/workspace.db
+
+# Editor
+.vscode/
+.DS_Store

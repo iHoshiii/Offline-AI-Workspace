@@ -1,0 +1,58 @@
+import json
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from app.db.sqlite_client import append_message, create_chat, get_chat, get_messages, list_chats
+from app.schemas.chat import ChatRequest, ChatSummary, ConversationDetail
+from app.services.ollama_client import ollama_client
+
+router = APIRouter(prefix="/chat")
+
+async def _stream_response_generator(chat_id: int, user_message: str, temperature: float, max_tokens: int):
+    assistant_text = ""
+    yield json.dumps({"type": "meta", "chat_id": chat_id}) + "\n"
+
+    try:
+        async for chunk in ollama_client.stream_completion(chat_id, user_message, temperature, max_tokens):
+            assistant_text += chunk
+            yield json.dumps({"type": "chunk", "text": chunk}) + "\n"
+    except Exception as exc:
+        yield json.dumps({"type": "error", "message": str(exc)}) + "\n"
+        return
+
+    trimmed = assistant_text.strip()
+    if trimmed:
+        await append_message(chat_id, "assistant", trimmed)
+        yield json.dumps({"type": "done", "text": trimmed}) + "\n"
+
+@router.post("/stream")
+async def chat_stream(request: ChatRequest):
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message text is required.")
+
+    chat_id = request.chat_id
+    if chat_id is None:
+        title = request.message.strip()[:80].replace("\n", " ")
+        chat_id = await create_chat(title or "New chat")
+    else:
+        chat = await get_chat(chat_id)
+        if chat is None:
+            raise HTTPException(status_code=404, detail="Chat not found.")
+
+    await append_message(chat_id, "user", request.message.strip())
+
+    return StreamingResponse(
+        _stream_response_generator(chat_id, request.message.strip(), request.temperature, request.max_tokens),
+        media_type="application/json",
+    )
+
+@router.get("/conversations")
+async def get_conversations() -> list[ChatSummary]:
+    return await list_chats()
+
+@router.get("/conversations/{chat_id}")
+async def get_conversation(chat_id: int) -> ConversationDetail:
+    chat = await get_chat(chat_id)
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Chat not found.")
+    messages = await get_messages(chat_id, limit=50)
+    return {"chat": chat, "messages": messages}

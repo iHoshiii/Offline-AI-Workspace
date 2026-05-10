@@ -145,6 +145,34 @@ export default function HomePage() {
     }
   };
 
+  const deleteConversation = async (conversationId: number) => {
+    try {
+      await fetch(`${API_BASE}/chat/conversations/${conversationId}`, { method: 'DELETE' });
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      if (activeChatId === conversationId) {
+        setActiveChatId(null);
+        setMessages([]);
+      }
+    } catch {
+      setError('Failed to delete conversation.');
+    }
+  };
+
+  const renameConversation = async (conversationId: number, newTitle: string) => {
+    try {
+      await fetch(`${API_BASE}/chat/conversations/${conversationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, title: newTitle } : c)),
+      );
+    } catch {
+      setError('Failed to rename conversation.');
+    }
+  };
+
   return (
     <main className="min-h-screen bg-surface text-slate-100">
       <div className="mx-auto flex h-screen max-w-[1600px] gap-6 overflow-hidden px-4 py-5 sm:px-6">
@@ -153,6 +181,8 @@ export default function HomePage() {
           activeConversationId={activeChatId}
           onSelectConversation={selectConversation}
           onCreateConversation={createNewConversation}
+          onDeleteConversation={deleteConversation}
+          onRenameConversation={renameConversation}
         />
         <section className="flex flex-1 flex-col rounded-[32px] border border-slate-800 bg-surface3 shadow-soft">
           <div className="border-b border-slate-800 px-6 py-5">

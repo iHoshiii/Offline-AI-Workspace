@@ -1,18 +1,22 @@
 # Node and Next
 node_modules/
+**/node_modules/
 .next/
+**/ .next/
 out/
 .env*
 
 # Python
 __pycache__/
-*.py[cod]
-*.pyo
-*.pyd
+**/*.py[cod]
+**/*.pyo
+**/*.pyd
 venv/
-.env*
-backend/data/workspace.db
+.venv/
+**/.venv/
+backend/data/*.db
 
 # Editor
 .vscode/
 .DS_Store
+*.swp

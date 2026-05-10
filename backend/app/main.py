@@ -10,8 +10,14 @@ app = FastAPI(
     version="0.1.0",
 )
 
+from fastapi.responses import RedirectResponse
+
 app.include_router(health_router)
 app.include_router(chat_router)
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/docs")
 
 @app.on_event("startup")
 async def on_startup() -> None:

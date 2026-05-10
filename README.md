@@ -29,14 +29,20 @@ Offline AI Workspace is an offline-first productivity platform built for low-end
    .\.venv\Scripts\Activate.ps1
    pip install -r backend/requirements.txt
    ```
-3. Start the backend:
+3. Run Ollama locally and verify the service is reachable:
+   ```powershell
+   ollama serve
+   ```
+4. Start the backend:
    ```powershell
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
-4. Verify health:
+5. Verify health:
    ```powershell
    curl http://localhost:8000/health
    ```
+
+> Note: Phase 1 currently uses SQLite for local chat persistence. MySQL can be added later if you need a dedicated server database.
 
 ### Frontend
 

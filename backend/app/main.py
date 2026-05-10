@@ -10,8 +10,23 @@ app = FastAPI(
     version="0.1.0",
 )
 
+from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For local development, we can allow all
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(health_router)
 app.include_router(chat_router)
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/docs")
 
 @app.on_event("startup")
 async def on_startup() -> None:

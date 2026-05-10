@@ -24,16 +24,23 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 """
 
-async def _execute(statement: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False, commit: bool = True) -> Any:
+async def _execute(statement: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False, commit: bool = True, is_script: bool = False) -> Any:
     async with DB_LOCK:
         def _run() -> Any:
             conn = sqlite3.connect(CHAT_DB_PATH, check_same_thread=False)
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute(statement, params)
+            if is_script:
+                cursor.executescript(statement)
+            else:
+                cursor.execute(statement, params)
+            
             if commit:
                 conn.commit()
-            if fetch_one:
+            
+            if is_script:
+                result = None
+            elif fetch_one:
                 result = cursor.fetchone()
             elif fetch_all:
                 result = cursor.fetchall()
@@ -46,7 +53,7 @@ async def _execute(statement: str, params: tuple = (), fetch_one: bool = False, 
 
 async def init_db() -> None:
     CHAT_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    await _execute(CREATE_SCHEMA, commit=True)
+    await _execute(CREATE_SCHEMA, commit=True, is_script=True)
 
 async def create_chat(title: str) -> int:
     query = "INSERT INTO chats (title) VALUES (?)"
@@ -79,3 +86,13 @@ async def find_or_create_chat(title: str) -> int:
     if row:
         return int(row["id"])
     return await create_chat(title)
+
+async def delete_chat(chat_id: int) -> bool:
+    query = "DELETE FROM chats WHERE id = ?"
+    await _execute(query, (chat_id,))
+    return True
+
+async def update_chat_title(chat_id: int, title: str) -> bool:
+    query = "UPDATE chats SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+    await _execute(query, (title, chat_id))
+    return True

@@ -21,3 +21,6 @@ class MessageSchema(BaseModel):
 class ConversationDetail(BaseModel):
     chat: ChatSummary
     messages: List[MessageSchema]
+
+class UpdateChatRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=100)

@@ -13,6 +13,12 @@ export function MessageInput({ value, onChange, onSubmit, disabled }: MessageInp
         rows={2}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            onSubmit();
+          }
+        }}
         className="min-h-[72px] w-full resize-none rounded-2xl border border-slate-700 bg-surface px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
         placeholder="Ask anything…"
       />

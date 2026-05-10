@@ -25,13 +25,15 @@ class OllamaClient:
 
     async def stream_completion(self, chat_id: int, user_input: str, temperature: float, max_tokens: int) -> AsyncGenerator[str, None]:
         prompt = await self.build_prompt(chat_id, user_input)
-        url = f"{OLLAMA_API_URL}/v1/completions"
+        url = f"{OLLAMA_API_URL}/api/generate"
         payload = {
             "model": MODEL_NAME,
             "prompt": prompt,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
             "stream": True,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            }
         }
 
         async with self.client.stream("POST", url, json=payload) as response:
@@ -40,23 +42,17 @@ class OllamaClient:
                 if not raw_line:
                     continue
 
-                trimmed = raw_line.strip()
-                if trimmed.startswith("data:"):
-                    trimmed = trimmed[5:].strip()
-                if not trimmed:
-                    continue
-
                 try:
-                    payload_chunk = json.loads(trimmed)
+                    payload_chunk = json.loads(raw_line)
                 except json.JSONDecodeError:
                     continue
 
-                # Ollama returns incremental text in `choices[0].delta` or `choices[0].text`
-                choice = payload_chunk.get("choices", [{}])[0]
-                text = choice.get("delta") or choice.get("text")
-                if text is None:
-                    continue
-                yield text
+                text = payload_chunk.get("response")
+                if text:
+                    yield text
+                
+                if payload_chunk.get("done"):
+                    break
 
     async def close(self) -> None:
         await self.client.aclose()

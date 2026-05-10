@@ -1,8 +1,8 @@
 import json
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from app.db.sqlite_client import append_message, create_chat, get_chat, get_messages, list_chats
-from app.schemas.chat import ChatRequest, ChatSummary, ConversationDetail
+from app.db.sqlite_client import append_message, create_chat, delete_chat, get_chat, get_messages, list_chats, update_chat_title
+from app.schemas.chat import ChatRequest, ChatSummary, ConversationDetail, UpdateChatRequest
 from app.services.ollama_client import ollama_client
 
 router = APIRouter(prefix="/chat")
@@ -56,3 +56,19 @@ async def get_conversation(chat_id: int) -> ConversationDetail:
         raise HTTPException(status_code=404, detail="Chat not found.")
     messages = await get_messages(chat_id, limit=50)
     return {"chat": chat, "messages": messages}
+
+@router.delete("/conversations/{chat_id}")
+async def remove_conversation(chat_id: int):
+    chat = await get_chat(chat_id)
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Chat not found.")
+    await delete_chat(chat_id)
+    return {"status": "success", "message": "Conversation deleted."}
+
+@router.patch("/conversations/{chat_id}")
+async def rename_conversation(chat_id: int, request: UpdateChatRequest):
+    chat = await get_chat(chat_id)
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Chat not found.")
+    await update_chat_title(chat_id, request.title)
+    return {"status": "success", "message": "Conversation renamed."}

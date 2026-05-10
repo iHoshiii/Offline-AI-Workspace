@@ -91,7 +91,7 @@ export function Sidebar({
               ) : (
                 <div className="flex items-center justify-between">
                   <p className="flex-1 truncate font-medium text-slate-100">{conversation.title}</p>
-                  <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex items-center gap-2 opacity-40 transition-opacity hover:opacity-100">
                     <button
                       title="Rename"
                       className="p-1 text-slate-400 hover:text-white"

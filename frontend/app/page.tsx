@@ -86,11 +86,12 @@ export default function HomePage() {
 
           try {
             const payload = JSON.parse(line) as ChatChunk;
-            if (payload.type === 'meta' && payload.chat_id) {
+            if (payload.type === 'meta' && typeof payload.chat_id === 'number') {
               setActiveChatId(payload.chat_id);
+              const chatId = payload.chat_id;
               setConversations((prev) => {
-                if (prev.some((item) => item.id === payload.chat_id)) return prev;
-                return [{ id: payload.chat_id, title: userMessage.content.slice(0, 80) }, ...prev];
+                if (prev.some((item) => item.id === chatId)) return prev;
+                return [{ id: chatId, title: userMessage.content.slice(0, 80) }, ...prev];
               });
             }
             if (payload.type === 'chunk' && payload.text) {

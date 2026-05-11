@@ -116,17 +116,17 @@ export function Sidebar({
               ) : (
                 <div className="flex items-center justify-between">
                   <p className="flex-1 truncate font-medium text-text-primary">{conversation.title}</p>
-                  <div className="flex items-center gap-2 opacity-40 transition-opacity hover:opacity-100">
+                  <div className="flex items-center gap-2 opacity-70 transition-opacity hover:opacity-100">
                     <button
                       title="Rename"
-                      className="p-1 text-text-muted hover:text-text-primary"
+                      className="p-1 text-text-muted hover:text-accent"
                       onClick={(e) => startEditing(e, conversation)}
                     >
                       ✎
                     </button>
                     <button
                       title="Delete"
-                      className="p-1 text-text-muted hover:text-rose-400"
+                      className="p-1 text-text-muted hover:text-rose-500"
                       onClick={(e) => {
                         e.stopPropagation();
                         if (confirm('Delete this conversation?')) {

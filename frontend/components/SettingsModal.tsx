@@ -1,10 +1,12 @@
 import { useState } from 'react';
 
+type ThemeType = 'light' | 'dark' | 'modern';
+
 type SettingsModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  theme: 'light' | 'dark';
-  onThemeChange: (theme: 'light' | 'dark') => void;
+  theme: ThemeType;
+  onThemeChange: (theme: ThemeType) => void;
 };
 
 export function SettingsModal({ isOpen, onClose, theme, onThemeChange }: SettingsModalProps) {
@@ -31,33 +33,44 @@ export function SettingsModal({ isOpen, onClose, theme, onThemeChange }: Setting
           <div className="space-y-4">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted opacity-80">Preferences</h3>
             
-            <div className="flex items-center justify-between rounded-2xl bg-surface2 p-5 border border-border shadow-sm">
+            <div className="flex flex-col gap-4 rounded-2xl bg-surface2 p-5 border border-border shadow-sm">
               <div>
                 <p className="font-bold text-text-primary">Appearance</p>
                 <p className="text-xs text-text-muted">Choose your interface style</p>
               </div>
-              <div className="flex rounded-2xl bg-background p-1.5 border border-border gap-1">
+              <div className="grid grid-cols-3 rounded-2xl bg-background p-1.5 border border-border gap-1">
+                <button 
+                  type="button"
+                  onClick={() => onThemeChange('dark')}
+                  className={`relative rounded-xl px-2 py-2.5 text-xs font-bold transition-all duration-300 cursor-pointer ${
+                    theme === 'dark' 
+                    ? 'bg-accent text-white shadow-lg ring-2 ring-accent/20' 
+                    : 'text-text-muted hover:bg-accent/10 hover:text-accent'
+                  }`}
+                >
+                  Black
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => onThemeChange('modern')}
+                  className={`relative rounded-xl px-2 py-2.5 text-xs font-bold transition-all duration-300 cursor-pointer ${
+                    theme === 'modern' 
+                    ? 'bg-accent text-white shadow-lg ring-2 ring-accent/20' 
+                    : 'text-text-muted hover:bg-accent/10 hover:text-accent'
+                  }`}
+                >
+                  Modern
+                </button>
                 <button 
                   type="button"
                   onClick={() => onThemeChange('light')}
-                  className={`relative flex-1 rounded-xl px-6 py-2.5 text-sm font-bold transition-all duration-300 cursor-pointer ${
+                  className={`relative rounded-xl px-2 py-2.5 text-xs font-bold transition-all duration-300 cursor-pointer ${
                     theme === 'light' 
-                    ? 'bg-accent text-white shadow-[0_0_15px_rgba(59,130,246,0.5)] ring-2 ring-accent/20' 
+                    ? 'bg-accent text-white shadow-lg ring-2 ring-accent/20' 
                     : 'text-text-muted hover:bg-accent/10 hover:text-accent'
                   }`}
                 >
                   Light
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => onThemeChange('dark')}
-                  className={`relative flex-1 rounded-xl px-6 py-2.5 text-sm font-bold transition-all duration-300 cursor-pointer ${
-                    theme === 'dark' 
-                    ? 'bg-accent text-white shadow-[0_0_15px_rgba(59,130,246,0.5)] ring-2 ring-accent/20' 
-                    : 'text-text-muted hover:bg-accent/10 hover:text-accent'
-                  }`}
-                >
-                  Dark
                 </button>
               </div>
             </div>

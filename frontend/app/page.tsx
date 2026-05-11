@@ -7,6 +7,8 @@ import { Sidebar } from '../components/Sidebar';
 import { MemoryManager } from '../components/MemoryManager';
 import { SettingsModal } from '../components/SettingsModal';
 
+type ThemeType = 'light' | 'dark' | 'modern';
+
 type Conversation = {
   id: number;
   title: string;
@@ -37,23 +39,21 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [isMemoryManagerOpen, setIsMemoryManagerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [theme, setTheme] = useState<ThemeType>('dark');
 
   // Load theme from localStorage on mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem('app-theme') as 'light' | 'dark' | null;
+    const savedTheme = localStorage.getItem('app-theme') as ThemeType | null;
     if (savedTheme) {
       setTheme(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
-      document.documentElement.classList.toggle('light', savedTheme === 'light');
     }
   }, []);
 
-  const toggleTheme = (newTheme: 'light' | 'dark') => {
+  const toggleTheme = (newTheme: ThemeType) => {
     setTheme(newTheme);
     localStorage.setItem('app-theme', newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
-    document.documentElement.classList.toggle('light', newTheme === 'light');
   };
 
   useEffect(() => {
@@ -312,7 +312,7 @@ export default function HomePage() {
   };
 
   return (
-    <div data-theme={theme} className={theme}>
+    <div data-theme={theme} className="w-full">
       <main className="min-h-screen bg-background text-text-primary transition-colors duration-300">
         <div className="mx-auto flex h-screen max-w-[1600px] gap-6 overflow-hidden px-4 py-5 sm:px-6">
           <Sidebar

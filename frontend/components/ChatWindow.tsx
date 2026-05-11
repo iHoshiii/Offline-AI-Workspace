@@ -11,8 +11,8 @@ type Message = {
 type ChatWindowProps = {
   messages: Message[];
   isTyping: boolean;
-  onDeleteMessage: (messageId: number) => void;
-  onEditMessage: (messageId: number, newContent: string) => void;
+  onDeleteMessage: (messageId: any) => void;
+  onEditMessage: (messageId: any, newContent: string) => void;
 };
 
 const renderMarkdown = (markdown: string) => ({ __html: marked.parse(markdown) });
@@ -26,15 +26,13 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
   const [editContent, setEditContent] = useState('');
 
   const startEditing = (message: Message) => {
-    // Use message.id if available, otherwise fallback to created_at as a temporary ID
+    // Use message.id if it exists, otherwise fallback to created_at
     const idToUse = message.id || message.created_at;
-    console.log('Starting edit for:', idToUse);
     setEditingId(idToUse);
     setEditContent(message.content);
   };
 
   const handleSaveEdit = () => {
-    // We only call the backend if we have a real numerical ID
     const realId = messages.find(m => (m.id || m.created_at) == editingId)?.id;
     if (realId && editContent.trim()) {
       onEditMessage(realId, editContent.trim());
@@ -44,7 +42,7 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-hidden px-4 py-5 sm:px-6">
-      <div className="space-y-4 overflow-y-auto pr-2">
+      <div className="space-y-6 overflow-y-auto pr-2">
         {messages.map((message, index) => {
           const isUser = message.role === 'user';
           const currentId = message.id || message.created_at;
@@ -54,88 +52,85 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
           return (
             <div 
               key={`${message.created_at}-${index}`} 
-              className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'} animate-message`}
+              className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} animate-message group`}
             >
-              <div className={`max-w-[90%] min-w-[180px] rounded-[24px] p-5 shadow-soft border relative transition-all ${
+              {/* Message Header */}
+              <div className={`mb-1.5 flex items-center gap-2 text-[9px] uppercase tracking-[0.15em] font-bold ${isUser ? 'mr-4 text-text-muted' : 'ml-4 text-text-muted'}`}>
+                <span>{isUser ? 'You' : 'AI Assistant'}</span>
+                <span className="opacity-30">•</span>
+                <span>{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+
+              <div className={`max-w-[85%] min-w-[160px] rounded-[24px] p-5 shadow-premium border relative transition-all group-hover:shadow-xl ${
                 isUser 
                   ? 'bg-accent text-white border-accent/20' 
                   : 'bg-surface2 text-text-primary border-border'
               }`}>
-                {/* Action Bar */}
+                {/* Floating Action Pill */}
                 {!isEditing && (
-                  <div className={`mb-3 flex items-center justify-between border-b pb-2 ${isUser ? 'border-white/20' : 'border-border'}`}>
-                    <div className={`flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold ${isUser ? 'text-white/70' : 'text-text-muted'}`}>
-                      <span>{isUser ? 'You' : 'AI'}</span>
-                      <span>•</span>
-                      <span>{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => startEditing(message)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all active:scale-95 ${
-                          isUser ? 'bg-white text-blue-600 hover:bg-blue-50' : 'bg-accent text-white hover:opacity-90 shadow-md'
-                        }`}
-                      >
-                        ✎ EDIT
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (message.id) onDeleteMessage(message.id);
-                        }}
-                        className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all active:scale-95 ${
-                          isUser ? 'bg-white/20 text-white hover:bg-rose-400' : 'bg-surface3 text-rose-500 border border-border hover:bg-rose-50/10'
-                        }`}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {isFileMessage && !isEditing && (
-                  <div className="mb-2 flex items-center gap-1 text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
-                    <FileIcon /> Attached Document
+                  <div className="absolute -top-3 right-4 flex items-center gap-1 bg-surface3 border border-border rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 z-20">
+                    <button
+                      onClick={(e) => { 
+                        e.preventDefault();
+                        e.stopPropagation(); 
+                        startEditing(message); 
+                      }}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter text-text-primary hover:bg-accent hover:text-white transition-colors cursor-pointer"
+                    >
+                      ✎ Edit
+                    </button>
+                    <div className="w-[1px] h-3 bg-border"></div>
+                    <button
+                      onClick={(e) => { 
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // ALWAYS use currentId (id or created_at)
+                        onDeleteMessage(currentId); 
+                      }}
+                      className="flex items-center justify-center w-8 h-7 rounded-full text-text-muted hover:text-rose-500 hover:bg-rose-50/10 transition-all cursor-pointer"
+                      title="Delete this message"
+                    >
+                      <span className="text-sm font-bold">✕</span>
+                    </button>
                   </div>
                 )}
 
                 {isEditing ? (
                   <div className="flex flex-col gap-3 min-w-[280px]">
-                    <div className="text-[10px] font-bold uppercase text-white/80 mb-1 flex justify-between">
-                      <span>Editing Mode</span>
-                      <span className="opacity-50">Press ESC to cancel</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase text-white/50 tracking-widest">Editor Mode</span>
+                      <button onClick={() => setEditingId(null)} className="text-[10px] text-white/40 hover:text-white cursor-pointer">Cancel</button>
                     </div>
                     <textarea
                       autoFocus
-                      className="w-full bg-black/30 border border-white/30 rounded-xl p-4 text-sm text-white placeholder-white/40 outline-none focus:ring-4 ring-white/10"
+                      className="w-full bg-black/20 border border-white/20 rounded-xl p-4 text-sm text-white outline-none focus:ring-2 ring-white/20 resize-none"
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Escape') setEditingId(null);
                         if (e.key === 'Enter' && e.ctrlKey) handleSaveEdit();
                       }}
-                      rows={5}
+                      rows={4}
                     />
-                    <div className="flex justify-end gap-3 mt-1">
-                      <button 
-                        onClick={() => setEditingId(null)}
-                        className="text-[10px] font-black uppercase text-white/70 hover:text-white px-3"
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        onClick={handleSaveEdit}
-                        className="text-[11px] font-black uppercase bg-white text-blue-700 px-6 py-2.5 rounded-xl hover:bg-blue-50 shadow-2xl active:translate-y-0.5 transition-all"
-                      >
-                        Save Changes
-                      </button>
-                    </div>
+                    <button 
+                      onClick={handleSaveEdit}
+                      className="w-full bg-white text-blue-600 py-2.5 rounded-xl text-[11px] font-black uppercase shadow-xl hover:bg-blue-50 transition-all active:scale-95 cursor-pointer"
+                    >
+                      Save Changes
+                    </button>
                   </div>
                 ) : (
-                  <div
-                    className={`markdown-body text-[15px] leading-relaxed ${isUser ? 'text-white' : ''} ${isFileMessage ? 'font-medium italic opacity-90' : ''}`}
-                    dangerouslySetInnerHTML={renderMarkdown(message.content)}
-                  />
+                  <div className="relative">
+                    {isFileMessage && (
+                      <div className={`mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${isUser ? 'text-white/60' : 'text-emerald-500'}`}>
+                        <FileIcon /> File Attached
+                      </div>
+                    )}
+                    <div
+                      className={`markdown-body text-[15px] leading-relaxed ${isUser ? 'text-white' : ''}`}
+                      dangerouslySetInnerHTML={renderMarkdown(message.content)}
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -143,8 +138,9 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
         })}
       </div>
       {isTyping ? (
-        <div className="rounded-3xl border border-dashed border-border bg-surface3 p-4 text-text-primary italic text-sm animate-pulse">
-          Assistant is typing...
+        <div className="flex items-center gap-2 ml-6 text-text-muted animate-pulse mt-4">
+          <div className="w-1.5 h-1.5 bg-accent rounded-full"></div>
+          <span className="text-xs font-bold uppercase tracking-widest">Assistant is thinking...</span>
         </div>
       ) : null}
     </div>

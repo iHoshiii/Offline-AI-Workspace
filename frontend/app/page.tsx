@@ -88,7 +88,7 @@ export default function HomePage() {
         return;
       }
 
-      // Add a User message showing the file being sent (Temporary placeholder)
+      // Add a User message showing the file being sent
       setMessages((prev) => [...prev, { 
         role: 'user', 
         content: `📄 **Attached File:** ${file.name}`,
@@ -112,7 +112,6 @@ export default function HomePage() {
         });
         const data = await res.json();
         if (data.status === 'success') {
-          // Fetch full messages to get the real IDs and the new assistant message
           fetchMessages(activeChatId);
         } else {
           setMessages((prev) => [
@@ -140,11 +139,6 @@ export default function HomePage() {
     window.addEventListener('upload-file', handleUpload);
     return () => window.removeEventListener('upload-file', handleUpload);
   }, [activeChatId]);
-
-  const activeConversation = useMemo(
-    () => conversations.find((conversation) => conversation.id === activeChatId) ?? null,
-    [conversations, activeChatId],
-  );
 
   const sendMessage = async () => {
     if (!draft.trim()) return;
@@ -198,7 +192,6 @@ export default function HomePage() {
                   return [{ id: lastChatId!, title: userMessage.content.slice(0, 80) }, ...prev];
                 });
               }
-              // Set the User message ID immediately!
               if (payload.user_message_id) {
                 setMessages((prev) => {
                   const newMsgs = [...prev];
@@ -227,7 +220,6 @@ export default function HomePage() {
               });
             }
             if (payload.type === 'done' && payload.message_id) {
-              // Finalize the assistant message ID!
               setMessages((prev) => {
                 const newMsgs = [...prev];
                 const lastAsstIdx = newMsgs.map(m => m.role).lastIndexOf('assistant');
@@ -246,7 +238,6 @@ export default function HomePage() {
         }
       }
       
-      // Full sync just to be safe
       if (lastChatId) fetchMessages(lastChatId);
       
     } catch (err) {
@@ -296,7 +287,7 @@ export default function HomePage() {
     }
   };
 
-  const editMessage = async (messageId: number, newContent: string) => {
+  const editMessage = async (messageId: any, newContent: string) => {
     if (!activeChatId) return;
     try {
       await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, {
@@ -305,22 +296,43 @@ export default function HomePage() {
         body: JSON.stringify({ content: newContent }),
       });
       setMessages((prev) => 
-        prev.map((m) => (m.id === messageId ? { ...m, content: newContent } : m))
+        prev.map((m) => (m.id == messageId || m.created_at == messageId ? { ...m, content: newContent } : m))
       );
     } catch {
       setError('Failed to update message.');
     }
   };
 
-  const deleteMessage = async (messageId: number) => {
+  const deleteMessage = async (messageId: any) => {
     if (!activeChatId || !messageId) return;
+    
+    // Convert to number if possible for the check
+    const numericId = Number(messageId);
+    const isRealDbId = !isNaN(numericId) && numericId > 0;
+
     try {
-      await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, {
-        method: 'DELETE',
-      });
-      setMessages((prev) => prev.filter((m) => m.id !== messageId));
-    } catch {
-      setError('Failed to delete message.');
+      // 1. Optimistic UI removal: Works for both database IDs and timestamps
+      setMessages((prev) => prev.filter((m) => {
+        const idMatch = m.id != null && m.id == messageId;
+        const timeMatch = m.created_at != null && m.created_at == messageId;
+        return !idMatch && !timeMatch;
+      }));
+      
+      // 2. Persistent Backend removal: ONLY if it's a real database ID
+      if (isRealDbId) {
+        const response = await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${numericId}`, {
+          method: 'DELETE',
+        });
+        
+        if (!response.ok) {
+          throw new Error('Backend failed to delete message');
+        }
+      }
+    } catch (err) {
+      console.error('Deletion error:', err);
+      setError('Failed to permanently delete message. Restoring chat...');
+      // Re-fetch to restore the message if the backend failed
+      if (activeChatId) fetchMessages(activeChatId);
     }
   };
 

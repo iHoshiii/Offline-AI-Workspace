@@ -1,46 +1,40 @@
-# Main Features Roadmap
+# 🚀 Offline AI Workspace Roadmap
 
-# Phase 1 — Foundation Setup
+## ✅ Phase 1: Foundation (COMPLETED)
+- [x] Modern React/Next.js Frontend
+- [x] FastAPI Backend Architecture
+- [x] Ollama Integration (Llama 3/Mistral/etc.)
+- [x] Streaming AI Responses
+- [x] Markdown & Code Syntax Highlighting
+- [x] SQLite Persistent Conversation History
 
-Goal:
-Create a functional local AI chat system.
+## ✅ Phase 2: Semantic Memory (COMPLETED)
+- [x] Cross-session "Long-term" Memory
+- [x] Automatic Embedding Generation
+- [x] Context-aware Retrieval
+- [x] Chat Summarization (Σ button)
 
-Features:
-* Chat UI
-* Ollama integration
-* Streaming responses
-* Basic backend API
-* Conversation history
-* Markdown rendering
+## ✅ Phase 3: RAG (Document Intelligence) (COMPLETED)
+- [x] PDF, TXT, MD, DOCX Support
+- [x] Parallel Embedding Processing (Performance Optimized)
+- [x] Semantic Document Search
+- [x] Multi-document Context Injection
 
+## ✅ Phase 4: System Awareness & Tools (COMPLETED)
+- [x] Hardware Monitoring (CPU/RAM/Disk stats)
+- [x] Local File System Inspection
+- [x] Predictive File Reading (AI reads files you mention)
+- [x] Tool-calling Framework
 
-# Phase 2 — Memory System
-Features:
-* Semantic memory
-* Embedding generation
-* Conversation summarization
-* Persistent chat sessions
+## ✅ Phase 5: Privacy, Control & Polish (COMPLETED)
+- [x] **Premium UI Overhaul**: Glassmorphism & Animations
+- [x] **Memory Manager**: Selective deletion of AI knowledge
+- [x] **Individual Message Deletion**: Wipe specific history & memories
+- [x] **Nuclear Wipe**: Global memory reset
+- [x] **Predictive UI**: "New Chat" pulsing feedback & smart typing indicators
 
-
-# Phase 3 — RAG System
-Features:
-* PDF uploads
-* Document chunking
-* Embeddings
-* Semantic retrieval
-* Context injection
-
-# Phase 4 — AI Tools
-Features:
-* File search
-* Folder summarization
-* Tool calling
-* Local automation
-
-# Phase 5 — Advanced Features
-Features:
-* Voice input
-* Desktop app
-* AI agents
-* Multi-workspace support
-* Plugin system
+## 🛠️ Future Goals (Upcoming)
+- [ ] **Voice Interface**: Local STT/TTS (Whisper/Piper)
+- [ ] **Global Search**: Search across all chats semantically
+- [ ] **Multi-Model Support**: Switch models mid-chat
+- [ ] **Plugin System**: User-created Python tools

@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import psutil
@@ -38,5 +39,20 @@ class ToolService:
             return f"Search results for '{query}':\n" + "\n".join(matches)
         except Exception as e:
             return f"Error searching files: {str(e)}"
+
+    def read_file(self, filename: str) -> str:
+        try:
+            # Security: Only allow reading files in current directory or subdirectories
+            if ".." in filename or filename.startswith("/") or ":" in filename:
+                 return "Access denied: Can only read files within the workspace."
+            
+            if not os.path.isfile(filename):
+                return f"Error: {filename} is not a file."
+
+            with open(filename, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read(2000) # Read first 2000 characters
+                return f"Content of {filename}:\n{content}..."
+        except Exception as e:
+            return f"Error reading file: {str(e)}"
 
 tool_service = ToolService()

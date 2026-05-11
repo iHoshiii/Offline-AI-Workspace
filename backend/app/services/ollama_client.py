@@ -1,4 +1,5 @@
 import json
+import os
 from typing import AsyncGenerator
 import httpx
 from app.config import MODEL_NAME, OLLAMA_API_URL, MAX_HISTORY_MESSAGES
@@ -19,7 +20,14 @@ class OllamaClient:
         
         system_info = tool_service.get_system_info()
         local_files = tool_service.list_files()
-        system_text = SYSTEM_PROMPT + f"System Information:\n{system_info}\n\nLocal Files (Current Directory):\n{local_files}"
+        
+        # Predictive File Injection: If user mentions a file, read it!
+        file_context = ""
+        for filename in os.listdir("."):
+            if filename.lower() in user_input.lower() and os.path.isfile(filename):
+                file_context += f"\n\n[FILE PREVIEW: {filename}]\n{tool_service.read_file(filename)}"
+
+        system_text = SYSTEM_PROMPT + f"System Information:\n{system_info}\n\nLocal Files (Current Directory):\n{local_files}{file_context}"
         
         if memories:
             system_text += f"\n\nRelevant context from past conversations:\n{memories}"

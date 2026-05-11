@@ -6,6 +6,8 @@ Welcome to your private, high-performance local AI workspace! This guide covers 
 
 ## 🛠️ Installation & Setup
 
+Before starting, please ensure your machine meets the [System Requirements](./system-requirements.md).
+
 ### 1. Prerequisites
 *   **Node.js** (v18+) - For the frontend.
 *   **Python** (3.10+) - For the backend.

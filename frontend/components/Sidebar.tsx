@@ -145,7 +145,7 @@ export function Sidebar({
       </div>
 
       <div className="mt-auto border-t border-border pt-4 space-y-4">
-        <div className="px-4 py-2 bg-surface3 rounded-2xl border border-border">
+        <div className="px-4 py-3 bg-surface3 rounded-2xl border border-border">
           <p className="text-[10px] uppercase tracking-widest text-text-muted mb-2">System Awareness</p>
           <div className="space-y-1.5">
             <div className="flex justify-between text-[11px]">
@@ -154,10 +154,6 @@ export function Sidebar({
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 Active
               </span>
-            </div>
-            <div className="flex justify-between text-[11px]">
-              <span className="text-text-muted">Memory Sync</span>
-              <span className="text-text-primary">Semantic Enabled</span>
             </div>
           </div>
           <div className="mt-3 flex gap-2">
@@ -175,13 +171,25 @@ export function Sidebar({
             </button>
           </div>
         </div>
-        <button 
-          onClick={onOpenSettings}
-          className="flex w-full items-center gap-3 rounded-2xl p-4 text-text-muted transition hover:bg-surface3 hover:text-text-primary"
-        >
-          <span>⚙</span>
-          <span className="text-sm font-medium">Settings</span>
-        </button>
+
+        <div className="flex gap-2">
+          <button 
+            onClick={onOpenSettings}
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-border p-3 text-text-muted transition hover:bg-surface3 hover:text-text-primary"
+          >
+            <span className="text-lg">⚙</span>
+            <span className="text-xs font-bold uppercase tracking-widest">Settings</span>
+          </button>
+          <div 
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-border p-3 text-text-muted transition bg-surface"
+          >
+            <span className="text-lg">🤖</span>
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase tracking-widest text-accent font-bold">Model</span>
+              <span className="text-[10px] font-bold text-text-primary">Phi-3 Mini</span>
+            </div>
+          </div>
+        </div>
       </div>
     </aside>
   );

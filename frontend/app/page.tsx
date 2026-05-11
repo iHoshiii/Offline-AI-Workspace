@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChatWindow } from '../components/ChatWindow';
 import { MessageInput } from '../components/MessageInput';
 import { Sidebar } from '../components/Sidebar';
+import { MemoryManager } from '../components/MemoryManager';
 
 type Conversation = {
   id: number;
@@ -33,6 +34,7 @@ export default function HomePage() {
   const [draft, setDraft] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMemoryManagerOpen, setIsMemoryManagerOpen] = useState(false);
 
   useEffect(() => {
     fetch(`${API_BASE}/chat/conversations`)
@@ -300,6 +302,7 @@ export default function HomePage() {
           onRenameConversation={renameConversation}
           onSummarizeConversation={summarizeConversation}
           onClearMemories={clearAllMemories}
+          onOpenMemoryManager={() => setIsMemoryManagerOpen(true)}
         />
         <section className="flex flex-1 flex-col rounded-[32px] border border-slate-800 bg-surface3 shadow-premium glass-effect">
           <div className="border-b border-slate-800 px-6 py-5">
@@ -315,6 +318,11 @@ export default function HomePage() {
           </div>
         </section>
       </div>
+      <MemoryManager 
+        isOpen={isMemoryManagerOpen} 
+        onClose={() => setIsMemoryManagerOpen(false)} 
+        apiBase={API_BASE} 
+      />
     </main>
   );
 }

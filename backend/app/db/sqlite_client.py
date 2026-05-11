@@ -125,9 +125,14 @@ async def add_memory(chat_id: int, content: str, embedding: list[float]) -> int:
     return await _execute(query, (chat_id, content, json.dumps(embedding)))
 
 async def list_all_memories() -> list[dict[str, Any]]:
-    query = "SELECT chat_id, content, embedding FROM memories"
+    query = "SELECT id, chat_id, content, created_at FROM memories ORDER BY created_at DESC"
     rows = await _execute(query, fetch_all=True)
     return [dict(row) for row in rows]
+
+async def delete_memory(memory_id: int) -> bool:
+    query = "DELETE FROM memories WHERE id = ?"
+    await _execute(query, (memory_id,))
+    return True
 
 async def clear_all_memories() -> bool:
     query = "DELETE FROM memories"

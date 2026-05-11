@@ -14,6 +14,7 @@ type SidebarProps = {
   onRenameConversation: (conversationId: number, newTitle: string) => void;
   onSummarizeConversation: (conversationId: number) => void;
   onClearMemories: () => void;
+  onOpenMemoryManager: () => void;
 };
 
 export function Sidebar({
@@ -25,6 +26,7 @@ export function Sidebar({
   onRenameConversation,
   onSummarizeConversation,
   onClearMemories,
+  onOpenMemoryManager,
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -150,12 +152,20 @@ export function Sidebar({
               <span className="text-slate-300">Semantic Enabled</span>
             </div>
           </div>
-          <button 
-            onClick={() => { if(confirm('Wipe all AI long-term memories? This cannot be undone.')) onClearMemories(); }}
-            className="mt-3 w-full py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-[10px] font-bold text-rose-400 uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
-          >
-            Wipe Memories
-          </button>
+          <div className="mt-3 flex gap-2">
+            <button 
+              onClick={() => { if(confirm('Wipe all AI long-term memories? This cannot be undone.')) onClearMemories(); }}
+              className="flex-1 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-[10px] font-bold text-rose-400 uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
+            >
+              Wipe
+            </button>
+            <button 
+              onClick={onOpenMemoryManager}
+              className="flex-1 py-1.5 rounded-xl border border-slate-700 bg-surface px-2 text-[10px] font-bold text-slate-300 uppercase tracking-widest hover:bg-slate-700 hover:text-white transition-all"
+            >
+              Manage
+            </button>
+          </div>
         </div>
         <button className="flex w-full items-center gap-3 rounded-2xl p-4 text-slate-400 transition hover:bg-surface3 hover:text-white">
           <span>⚙</span>

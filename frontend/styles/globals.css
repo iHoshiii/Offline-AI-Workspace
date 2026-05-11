@@ -61,6 +61,40 @@ textarea {
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), 0 0 20px -5px rgba(56, 189, 248, 0.1);
 }
 
+.markdown-body {
+  line-height: 1.6;
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  color: #fff;
+}
+
+.markdown-body p {
+  margin-bottom: 1em;
+}
+
+.markdown-body code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.2em 0.4em;
+  border-radius: 0.3em;
+  font-size: 0.9em;
+}
+
+.prose-invert-dark .markdown-body {
+  color: #0f172a;
+}
+.prose-invert-dark .markdown-body code {
+  background: rgba(0, 0, 0, 0.1);
+}
+.prose-invert-dark .markdown-body h1, 
+.prose-invert-dark .markdown-body h2, 
+.prose-invert-dark .markdown-body h3 {
+  color: #0f172a;
+}
+
 /* Custom Scrollbar for premium feel */
 ::-webkit-scrollbar {
   width: 6px;

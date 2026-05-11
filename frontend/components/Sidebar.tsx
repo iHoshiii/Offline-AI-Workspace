@@ -22,6 +22,7 @@ export function Sidebar({
   onCreateConversation,
   onDeleteConversation,
   onRenameConversation,
+  onSummarizeConversation,
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');

@@ -22,16 +22,23 @@ export function ChatWindow({ messages, isTyping }: ChatWindowProps) {
           return (
             <div 
               key={`${message.created_at}-${index}`} 
-              className="rounded-3xl border border-slate-800 bg-surface3 p-4 shadow-soft animate-message"
+              className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'} animate-message`}
             >
-              <div className="mb-2 flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-slate-500">
-                <span>{isUser ? 'You' : 'Assistant'}</span>
-                <span>{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <div className={`max-w-[85%] rounded-[24px] p-4 shadow-soft border ${
+                isUser 
+                  ? 'bg-accent text-slate-950 border-sky-400/20' 
+                  : 'bg-surface2 text-slate-100 border-slate-800'
+              }`}>
+                <div className={`mb-1 flex items-center gap-2 text-[10px] uppercase tracking-widest ${isUser ? 'text-slate-900/60' : 'text-slate-500'}`}>
+                  <span className="font-bold">{isUser ? 'You' : 'AI Assistant'}</span>
+                  <span>•</span>
+                  <span>{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div
+                  className={`markdown-body text-[15px] leading-relaxed ${isUser ? 'prose-invert-dark' : ''}`}
+                  dangerouslySetInnerHTML={renderMarkdown(message.content)}
+                />
               </div>
-              <div
-                className="markdown-body text-slate-200"
-                dangerouslySetInnerHTML={renderMarkdown(message.content)}
-              />
             </div>
           );
         })}

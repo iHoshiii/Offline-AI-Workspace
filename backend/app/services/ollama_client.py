@@ -18,7 +18,8 @@ class OllamaClient:
         messages = await get_messages(chat_id, limit=MAX_HISTORY_MESSAGES)
         
         system_info = tool_service.get_system_info()
-        system_text = SYSTEM_PROMPT + f"System Information:\n{system_info}"
+        local_files = tool_service.list_files()
+        system_text = SYSTEM_PROMPT + f"System Information:\n{system_info}\n\nLocal Files (Current Directory):\n{local_files}"
         
         if memories:
             system_text += f"\n\nRelevant context from past conversations:\n{memories}"

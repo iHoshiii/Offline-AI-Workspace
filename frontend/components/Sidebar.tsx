@@ -131,7 +131,23 @@ export function Sidebar({
         )}
       </div>
 
-      <div className="mt-auto border-t border-slate-800/50 pt-4">
+      <div className="mt-auto border-t border-slate-800/50 pt-4 space-y-4">
+        <div className="px-4 py-2 bg-surface3 rounded-2xl border border-slate-800/50">
+          <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">System Awareness</p>
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-[11px]">
+              <span className="text-slate-400">Local AI Status</span>
+              <span className="text-emerald-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Active
+              </span>
+            </div>
+            <div className="flex justify-between text-[11px]">
+              <span className="text-slate-400">Memory Sync</span>
+              <span className="text-slate-300">Semantic Enabled</span>
+            </div>
+          </div>
+        </div>
         <button className="flex w-full items-center gap-3 rounded-2xl p-4 text-slate-400 transition hover:bg-surface3 hover:text-white">
           <span>⚙</span>
           <span className="font-medium">Settings</span>

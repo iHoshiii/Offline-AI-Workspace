@@ -13,9 +13,14 @@ class OllamaClient:
     def __init__(self) -> None:
         self.client = httpx.AsyncClient(timeout=None)
 
-    async def build_prompt(self, chat_id: int, user_input: str) -> str:
+    async def build_prompt(self, chat_id: int, user_input: str, memories: str = "") -> str:
         messages = await get_messages(chat_id, limit=MAX_HISTORY_MESSAGES)
-        prompt_lines = [SYSTEM_PROMPT, ""]
+        
+        system_text = SYSTEM_PROMPT
+        if memories:
+            system_text += f"\n\nRelevant context from past conversations:\n{memories}"
+            
+        prompt_lines = [system_text, ""]
         for message in messages:
             role = "User" if message["role"] == "user" else "Assistant"
             prompt_lines.append(f"{role}: {message['content']}")
@@ -23,8 +28,8 @@ class OllamaClient:
         prompt_lines.append("Assistant:")
         return "\n".join(prompt_lines)
 
-    async def stream_completion(self, chat_id: int, user_input: str, temperature: float, max_tokens: int) -> AsyncGenerator[str, None]:
-        prompt = await self.build_prompt(chat_id, user_input)
+    async def stream_completion(self, chat_id: int, user_input: str, temperature: float, max_tokens: int, memories: str = "") -> AsyncGenerator[str, None]:
+        prompt = await self.build_prompt(chat_id, user_input, memories)
         url = f"{OLLAMA_API_URL}/api/generate"
         payload = {
             "model": MODEL_NAME,
@@ -53,6 +58,16 @@ class OllamaClient:
                 
                 if payload_chunk.get("done"):
                     break
+
+    async def get_embeddings(self, text: str) -> list[float]:
+        url = f"{OLLAMA_API_URL}/api/embeddings"
+        payload = {
+            "model": MODEL_NAME,
+            "prompt": text,
+        }
+        response = await self.client.post(url, json=payload)
+        response.raise_for_status()
+        return response.json()["embedding"]
 
     async def close(self) -> None:
         await self.client.aclose()

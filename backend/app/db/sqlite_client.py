@@ -1,4 +1,5 @@
 import asyncio
+import json
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,15 @@ CREATE TABLE IF NOT EXISTS messages (
     chat_id INTEGER NOT NULL,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS memories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    embedding TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
@@ -96,3 +106,12 @@ async def update_chat_title(chat_id: int, title: str) -> bool:
     query = "UPDATE chats SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
     await _execute(query, (title, chat_id))
     return True
+
+async def add_memory(chat_id: int, content: str, embedding: list[float]) -> int:
+    query = "INSERT INTO memories (chat_id, content, embedding) VALUES (?, ?, ?)"
+    return await _execute(query, (chat_id, content, json.dumps(embedding)))
+
+async def list_all_memories() -> list[dict[str, Any]]:
+    query = "SELECT chat_id, content, embedding FROM memories"
+    rows = await _execute(query, fetch_all=True)
+    return [dict(row) for row in rows]

@@ -59,13 +59,13 @@ export function MemoryManager({ isOpen, onClose, apiBase }: MemoryManagerProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
-      <div className="flex h-[80vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] border border-slate-800 bg-surface2 shadow-premium glass-effect">
-        <div className="flex items-center justify-between border-b border-slate-800 px-8 py-6">
+      <div className="flex h-[80vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] border border-border bg-surface2 shadow-premium glass-effect">
+        <div className="flex items-center justify-between border-b border-border px-8 py-6">
           <div>
-            <h2 className="text-xl font-bold text-white">Semantic Memory Manager</h2>
-            <p className="text-sm text-slate-400">View and manage exactly what the AI has learned about you.</p>
+            <h2 className="text-xl font-bold text-text-primary">Semantic Memory Manager</h2>
+            <p className="text-sm text-text-muted">View and manage exactly what the AI has learned about you.</p>
           </div>
-          <button onClick={onClose} className="rounded-full bg-slate-800 p-2 text-slate-400 transition hover:bg-slate-700 hover:text-white">
+          <button onClick={onClose} className="rounded-full bg-surface3 p-2 text-text-muted transition hover:bg-accent hover:text-white">
             ✕
           </button>
         </div>
@@ -74,7 +74,7 @@ export function MemoryManager({ isOpen, onClose, apiBase }: MemoryManagerProps) 
           <input
             type="text"
             placeholder="Search through AI memories..."
-            className="w-full rounded-2xl border border-slate-800 bg-surface3 px-4 py-3 text-slate-100 outline-none focus:border-accent transition-all"
+            className="w-full rounded-2xl border border-border bg-surface3 px-4 py-3 text-text-primary placeholder:text-text-muted/50 outline-none focus:border-accent transition-all"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -82,16 +82,16 @@ export function MemoryManager({ isOpen, onClose, apiBase }: MemoryManagerProps) 
 
         <div className="flex-1 overflow-y-auto px-8 py-4 space-y-4">
           {loading ? (
-            <div className="flex items-center justify-center py-20 text-slate-500 italic">Loading memory index...</div>
+            <div className="flex items-center justify-center py-20 text-text-muted italic">Loading memory index...</div>
           ) : filteredMemories.length === 0 ? (
-            <div className="flex items-center justify-center py-20 text-slate-500 italic">No memories found.</div>
+            <div className="flex items-center justify-center py-20 text-text-muted italic">No memories found.</div>
           ) : (
             filteredMemories.map((memory) => (
-              <div key={memory.id} className="group relative rounded-2xl border border-slate-800 bg-surface3 p-4 transition hover:border-slate-600">
+              <div key={memory.id} className="group relative rounded-2xl border border-border bg-surface3 p-4 transition hover:border-accent">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <p className="text-sm leading-relaxed text-slate-200 whitespace-pre-wrap">{memory.content}</p>
-                    <div className="mt-3 flex items-center gap-3 text-[10px] uppercase tracking-widest text-slate-500">
+                    <p className="text-sm leading-relaxed text-text-primary whitespace-pre-wrap">{memory.content}</p>
+                    <div className="mt-3 flex items-center gap-3 text-[10px] uppercase tracking-widest text-text-muted">
                       <span>Chat ID: {memory.chat_id}</span>
                       <span>•</span>
                       <span>{new Date(memory.created_at).toLocaleString()}</span>

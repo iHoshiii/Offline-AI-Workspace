@@ -8,12 +8,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        surface: '#0f172a',
-        surface2: '#111827',
-        surface3: '#1f2937',
-        border: '#334155',
-        accent: '#38bdf8',
-        muted: '#94a3b8',
+        background: "var(--bg)",
+        surface: "var(--surface)",
+        surface2: "var(--surface2)",
+        surface3: "var(--surface3)",
+        accent: "var(--accent)",
+        border: "var(--border)",
+        "text-primary": "var(--text)",
+        "text-muted": "var(--text-muted)",
       },
       boxShadow: {
         soft: '0 10px 30px rgba(15, 23, 42, 0.35)',

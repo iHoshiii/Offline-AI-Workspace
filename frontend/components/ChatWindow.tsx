@@ -28,8 +28,8 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage }: ChatWindowPr
             >
               <div className={`max-w-[85%] rounded-[24px] p-4 shadow-soft border relative ${
                 isUser 
-                  ? 'bg-accent text-slate-950 border-sky-400/20' 
-                  : 'bg-surface2 text-slate-100 border-slate-800'
+                  ? 'bg-accent text-white border-accent/20' 
+                  : 'bg-surface2 text-text-primary border-border'
               }`}>
                 {message.id && (
                   <button
@@ -40,13 +40,13 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage }: ChatWindowPr
                     ✕
                   </button>
                 )}
-                <div className={`mb-1 flex items-center gap-2 text-[10px] uppercase tracking-widest ${isUser ? 'text-slate-900/60' : 'text-slate-500'}`}>
+                <div className={`mb-1 flex items-center gap-2 text-[10px] uppercase tracking-widest ${isUser ? 'text-white/70' : 'text-text-muted'}`}>
                   <span className="font-bold">{isUser ? 'You' : 'AI Assistant'}</span>
                   <span>•</span>
                   <span>{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
                 <div
-                  className={`markdown-body text-[15px] leading-relaxed ${isUser ? 'prose-invert-dark' : ''}`}
+                  className={`markdown-body text-[15px] leading-relaxed ${isUser ? 'text-white' : ''}`}
                   dangerouslySetInnerHTML={renderMarkdown(message.content)}
                 />
               </div>
@@ -55,7 +55,7 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage }: ChatWindowPr
         })}
       </div>
       {isTyping ? (
-        <div className="rounded-3xl border border-dashed border-slate-700 bg-surface3 p-4 text-slate-300">
+        <div className="rounded-3xl border border-dashed border-border bg-surface3 p-4 text-text-primary italic text-sm">
           Assistant is typing...
         </div>
       ) : null}

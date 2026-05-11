@@ -11,6 +11,7 @@ type Conversation = {
 };
 
 type Message = {
+  id?: number;
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
@@ -265,6 +266,17 @@ export default function HomePage() {
       setIsTyping(false);
     }
   };
+  const deleteMessage = async (messageId: number) => {
+    if (!activeChatId) return;
+    try {
+      await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, {
+        method: 'DELETE',
+      });
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    } catch {
+      setError('Failed to delete message.');
+    }
+  };
 
   return (
     <main className="min-h-screen bg-surface text-slate-100">
@@ -284,7 +296,7 @@ export default function HomePage() {
             <p className="mt-1 text-sm text-slate-400">Streaming responses, markdown rendering, and local message persistence.</p>
           </div>
           <div className="flex flex-1 flex-col overflow-hidden">
-            <ChatWindow messages={messages} isTyping={isTyping} />
+            <ChatWindow messages={messages} isTyping={isTyping} onDeleteMessage={deleteMessage} />
             <div className="border-t border-slate-800 px-6 pb-6 pt-4">
               {error ? <p className="mb-3 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p> : null}
               <MessageInput value={draft} onChange={setDraft} onSubmit={sendMessage} disabled={isTyping} />

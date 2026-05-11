@@ -80,6 +80,19 @@ async def rename_conversation(chat_id: int, request: UpdateChatRequest):
     await update_chat_title(chat_id, request.title)
     return {"status": "success", "message": "Conversation renamed."}
 
+@router.delete("/conversations/{chat_id}/messages/{message_id}")
+async def remove_message(chat_id: int, message_id: int):
+    # Verify chat exists
+    chat = await get_chat(chat_id)
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Chat not found.")
+    
+    success = await delete_message(message_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Message not found.")
+    
+    return {"status": "success", "message": "Message and associated memory deleted."}
+
 @router.post("/conversations/{chat_id}/upload")
 async def upload_document(chat_id: int, file: UploadFile = File(...)):
     chat = await get_chat(chat_id)

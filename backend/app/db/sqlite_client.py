@@ -86,7 +86,7 @@ async def append_message(chat_id: int, role: str, content: str) -> int:
     return message_id
 
 async def get_messages(chat_id: int, limit: int = 20) -> list[dict[str, Any]]:
-    query = "SELECT role, content, created_at FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT ?"
+    query = "SELECT id, role, content, created_at FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT ?"
     rows = await _execute(query, (chat_id, limit), fetch_all=True)
     return [dict(row) for row in reversed(rows)]
 
@@ -101,6 +101,19 @@ async def delete_chat(chat_id: int) -> bool:
     query = "DELETE FROM chats WHERE id = ?"
     await _execute(query, (chat_id,))
     return True
+
+async def delete_message(message_id: int) -> bool:
+    # First get the content so we can delete the corresponding memory
+    query_content = "SELECT content FROM messages WHERE id = ?"
+    row = await _execute(query_content, (message_id,), fetch_one=True)
+    if row:
+        content = row["content"]
+        # Delete message
+        await _execute("DELETE FROM messages WHERE id = ?", (message_id,))
+        # Delete memories that contain this content (best effort sync)
+        await _execute("DELETE FROM memories WHERE content LIKE ?", (f"%{content}%",))
+        return True
+    return False
 
 async def update_chat_title(chat_id: int, title: str) -> bool:
     query = "UPDATE chats SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"

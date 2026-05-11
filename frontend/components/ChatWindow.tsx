@@ -1,6 +1,7 @@
 import { marked } from 'marked';
 
 type Message = {
+  id?: number;
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
@@ -9,11 +10,12 @@ type Message = {
 type ChatWindowProps = {
   messages: Message[];
   isTyping: boolean;
+  onDeleteMessage: (messageId: number) => void;
 };
 
 const renderMarkdown = (markdown: string) => ({ __html: marked.parse(markdown) });
 
-export function ChatWindow({ messages, isTyping }: ChatWindowProps) {
+export function ChatWindow({ messages, isTyping, onDeleteMessage }: ChatWindowProps) {
   return (
     <div className="flex h-full flex-col gap-4 overflow-hidden px-4 py-5 sm:px-6">
       <div className="space-y-4 overflow-y-auto pr-2">
@@ -22,13 +24,22 @@ export function ChatWindow({ messages, isTyping }: ChatWindowProps) {
           return (
             <div 
               key={`${message.created_at}-${index}`} 
-              className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'} animate-message`}
+              className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'} animate-message group`}
             >
-              <div className={`max-w-[85%] rounded-[24px] p-4 shadow-soft border ${
+              <div className={`max-w-[85%] rounded-[24px] p-4 shadow-soft border relative ${
                 isUser 
                   ? 'bg-accent text-slate-950 border-sky-400/20' 
                   : 'bg-surface2 text-slate-100 border-slate-800'
               }`}>
+                {message.id && (
+                  <button
+                    onClick={() => onDeleteMessage(message.id!)}
+                    className="absolute -top-2 -right-2 hidden h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-white shadow-lg transition-all hover:scale-110 group-hover:flex"
+                    title="Delete message from memory"
+                  >
+                    ✕
+                  </button>
+                )}
                 <div className={`mb-1 flex items-center gap-2 text-[10px] uppercase tracking-widest ${isUser ? 'text-slate-900/60' : 'text-slate-500'}`}>
                   <span className="font-bold">{isUser ? 'You' : 'AI Assistant'}</span>
                   <span>•</span>

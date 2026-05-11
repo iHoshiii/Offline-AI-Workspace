@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChatWindow } from '../components/ChatWindow';
 import { MessageInput } from '../components/MessageInput';
 import { Sidebar } from '../components/Sidebar';
+import { MemoryManager } from '../components/MemoryManager';
+import { SettingsModal } from '../components/SettingsModal';
+
+type ThemeType = 'light' | 'dark' | 'modern';
 
 type Conversation = {
   id: number;
@@ -11,6 +15,7 @@ type Conversation = {
 };
 
 type Message = {
+  id?: number;
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
@@ -21,6 +26,8 @@ type ChatChunk = {
   text?: string;
   chat_id?: number;
   message?: string;
+  user_message_id?: number;
+  message_id?: number;
 };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -30,20 +37,108 @@ export default function HomePage() {
   const [activeChatId, setActiveChatId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [typingChatId, setTypingChatId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isMemoryManagerOpen, setIsMemoryManagerOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [theme, setTheme] = useState<ThemeType>('dark');
 
+  // Load theme from localStorage on mount
   useEffect(() => {
+    const savedTheme = localStorage.getItem('app-theme') as ThemeType | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+  }, []);
+
+  const toggleTheme = (newTheme: ThemeType) => {
+    setTheme(newTheme);
+    localStorage.setItem('app-theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  };
+
+  const fetchConversations = () => {
     fetch(`${API_BASE}/chat/conversations`)
       .then((res) => res.json())
       .then((data) => setConversations(data))
       .catch(() => setConversations([]));
+  };
+
+  const fetchMessages = (chatId: number) => {
+    fetch(`${API_BASE}/chat/conversations/${chatId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.messages) {
+          setMessages(data.messages);
+        }
+      })
+      .catch(() => setError('Failed to load messages.'));
+  };
+
+  useEffect(() => {
+    fetchConversations();
   }, []);
 
-  const activeConversation = useMemo(
-    () => conversations.find((conversation) => conversation.id === activeChatId) ?? null,
-    [conversations, activeChatId],
-  );
+  useEffect(() => {
+    const handleUpload = async (e: any) => {
+      const file = e.detail;
+      if (!activeChatId) {
+        setError('Please select or create a chat first.');
+        return;
+      }
+
+      // Add a User message showing the file being sent
+      setMessages((prev) => [...prev, { 
+        role: 'user', 
+        content: `📄 **Attached File:** ${file.name}`,
+        created_at: new Date().toISOString()
+      }]);
+
+      // Add a temporary processing message from Assistant
+      setMessages((prev) => [...prev, { 
+        role: 'assistant', 
+        content: `⏳ Processing "${file.name}"... please wait.`,
+        created_at: new Date().toISOString()
+      }]);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch(`${API_BASE}/chat/conversations/${activeChatId}/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          fetchMessages(activeChatId);
+        } else {
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            { 
+              role: 'assistant', 
+              content: `❌ Upload failed: ${data.detail || 'Unknown error'}`,
+              created_at: new Date().toISOString()
+            }
+          ]);
+        }
+      } catch (err) {
+        console.error(err);
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          { 
+            role: 'assistant', 
+            content: `❌ Error uploading file. Please try again.`,
+            created_at: new Date().toISOString()
+          }
+        ]);
+      }
+    };
+
+    window.addEventListener('upload-file', handleUpload);
+    return () => window.removeEventListener('upload-file', handleUpload);
+  }, [activeChatId]);
 
   const sendMessage = async () => {
     if (!draft.trim()) return;
@@ -55,7 +150,7 @@ export default function HomePage() {
     };
     setMessages((prev) => [...prev, userMessage]);
     setDraft('');
-    setIsTyping(true);
+    setTypingChatId(activeChatId);
 
     try {
       const response = await fetch(`${API_BASE}/chat/stream`, {
@@ -72,6 +167,7 @@ export default function HomePage() {
       const decoder = new TextDecoder();
       let buffer = '';
       let assistantDraft = '';
+      let lastChatId = activeChatId;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -86,13 +182,26 @@ export default function HomePage() {
 
           try {
             const payload = JSON.parse(line) as ChatChunk;
-            if (payload.type === 'meta' && typeof payload.chat_id === 'number') {
-              setActiveChatId(payload.chat_id);
-              const chatId = payload.chat_id;
-              setConversations((prev) => {
-                if (prev.some((item) => item.id === chatId)) return prev;
-                return [{ id: chatId, title: userMessage.content.slice(0, 80) }, ...prev];
-              });
+            if (payload.type === 'meta') {
+              if (typeof payload.chat_id === 'number') {
+                lastChatId = payload.chat_id;
+                setActiveChatId(lastChatId);
+                setTypingChatId(lastChatId);
+                setConversations((prev) => {
+                  if (prev.some((item) => item.id === lastChatId)) return prev;
+                  return [{ id: lastChatId!, title: userMessage.content.slice(0, 80) }, ...prev];
+                });
+              }
+              if (payload.user_message_id) {
+                setMessages((prev) => {
+                  const newMsgs = [...prev];
+                  const lastUserIdx = newMsgs.map(m => m.role).lastIndexOf('user');
+                  if (lastUserIdx !== -1) {
+                    newMsgs[lastUserIdx] = { ...newMsgs[lastUserIdx], id: payload.user_message_id };
+                  }
+                  return newMsgs;
+                });
+              }
             }
             if (payload.type === 'chunk' && payload.text) {
               assistantDraft += payload.text;
@@ -110,6 +219,16 @@ export default function HomePage() {
                 return [...prev, nextMessage];
               });
             }
+            if (payload.type === 'done' && payload.message_id) {
+              setMessages((prev) => {
+                const newMsgs = [...prev];
+                const lastAsstIdx = newMsgs.map(m => m.role).lastIndexOf('assistant');
+                if (lastAsstIdx !== -1) {
+                  newMsgs[lastAsstIdx] = { ...newMsgs[lastAsstIdx], id: payload.message_id };
+                }
+                return newMsgs;
+              });
+            }
             if (payload.type === 'error') {
               setError(payload.message ?? 'Unknown backend error');
             }
@@ -118,10 +237,13 @@ export default function HomePage() {
           }
         }
       }
+      
+      if (lastChatId) fetchMessages(lastChatId);
+      
     } catch (err) {
       setError((err as Error).message ?? 'Unable to connect to backend.');
     } finally {
-      setIsTyping(false);
+      setTypingChatId(null);
     }
   };
 
@@ -134,15 +256,7 @@ export default function HomePage() {
   const selectConversation = async (conversationId: number) => {
     setError(null);
     setActiveChatId(conversationId);
-    try {
-      const response = await fetch(`${API_BASE}/chat/conversations/${conversationId}`);
-      const data = await response.json();
-      if (data?.messages) {
-        setMessages(data.messages);
-      }
-    } catch {
-      setError('Failed to load conversation.');
-    }
+    fetchMessages(conversationId);
   };
 
   const deleteConversation = async (conversationId: number) => {
@@ -173,31 +287,138 @@ export default function HomePage() {
     }
   };
 
+  const editMessage = async (messageId: any, newContent: string) => {
+    if (!activeChatId) return;
+    try {
+      await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newContent }),
+      });
+      setMessages((prev) => 
+        prev.map((m) => (m.id == messageId || m.created_at == messageId ? { ...m, content: newContent } : m))
+      );
+    } catch {
+      setError('Failed to update message.');
+    }
+  };
+
+  const deleteMessage = async (messageId: any) => {
+    if (!activeChatId || !messageId) return;
+    
+    // Convert to number if possible for the check
+    const numericId = Number(messageId);
+    const isRealDbId = !isNaN(numericId) && numericId > 0;
+
+    try {
+      // 1. Optimistic UI removal: Works for both database IDs and timestamps
+      setMessages((prev) => prev.filter((m) => {
+        const idMatch = m.id != null && m.id == messageId;
+        const timeMatch = m.created_at != null && m.created_at == messageId;
+        return !idMatch && !timeMatch;
+      }));
+      
+      // 2. Persistent Backend removal: ONLY if it's a real database ID
+      if (isRealDbId) {
+        const response = await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${numericId}`, {
+          method: 'DELETE',
+        });
+        
+        if (!response.ok) {
+          throw new Error('Backend failed to delete message');
+        }
+      }
+    } catch (err) {
+      console.error('Deletion error:', err);
+      setError('Failed to permanently delete message. Restoring chat...');
+      // Re-fetch to restore the message if the backend failed
+      if (activeChatId) fetchMessages(activeChatId);
+    }
+  };
+
+  const summarizeConversation = async (conversationId: number) => {
+    setTypingChatId(conversationId);
+    setMessages((prev) => [...prev, { 
+      role: 'assistant', 
+      content: '⏳ Summarizing conversation...', 
+      created_at: new Date().toISOString() 
+    }]);
+
+    try {
+      const response = await fetch(`${API_BASE}/chat/conversations/${conversationId}/summarize`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+      if (data.summary) {
+        fetchMessages(conversationId);
+      } else {
+        throw new Error('Summary not found.');
+      }
+    } catch (err) {
+      setError('Failed to summarize conversation.');
+      setMessages((prev) => prev.slice(0, -1));
+    } finally {
+      setTypingChatId(null);
+    }
+  };
+
+  const clearAllMemories = async () => {
+    try {
+      await fetch(`${API_BASE}/chat/memories`, { method: 'DELETE' });
+      setError('All semantic memories wiped successfully.');
+      setTimeout(() => setError(null), 3000);
+    } catch {
+      setError('Failed to wipe memories.');
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-surface text-slate-100">
-      <div className="mx-auto flex h-screen max-w-[1600px] gap-6 overflow-hidden px-4 py-5 sm:px-6">
-        <Sidebar
-          conversations={conversations}
-          activeConversationId={activeChatId}
-          onSelectConversation={selectConversation}
-          onCreateConversation={createNewConversation}
-          onDeleteConversation={deleteConversation}
-          onRenameConversation={renameConversation}
-        />
-        <section className="flex flex-1 flex-col rounded-[32px] border border-slate-800 bg-surface3 shadow-soft">
-          <div className="border-b border-slate-800 px-6 py-5">
-            <h2 className="text-lg font-semibold text-slate-100">Chat</h2>
-            <p className="mt-1 text-sm text-slate-400">Streaming responses, markdown rendering, and local message persistence.</p>
-          </div>
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <ChatWindow messages={messages} isTyping={isTyping} />
-            <div className="border-t border-slate-800 px-6 pb-6 pt-4">
-              {error ? <p className="mb-3 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p> : null}
-              <MessageInput value={draft} onChange={setDraft} onSubmit={sendMessage} disabled={isTyping} />
+    <div data-theme={theme} className="w-full">
+      <main className="min-h-screen bg-background text-text-primary transition-colors duration-300">
+        <div className="mx-auto flex h-screen max-w-[1600px] gap-6 overflow-hidden px-4 py-5 sm:px-6">
+          <Sidebar
+            conversations={conversations}
+            activeConversationId={activeChatId}
+            onSelectConversation={selectConversation}
+            onCreateConversation={createNewConversation}
+            onDeleteConversation={deleteConversation}
+            onRenameConversation={renameConversation}
+            onSummarizeConversation={summarizeConversation}
+            onClearMemories={clearAllMemories}
+            onOpenMemoryManager={() => setIsMemoryManagerOpen(true)}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
+          <section className="flex flex-1 flex-col rounded-[32px] border border-border bg-surface shadow-premium glass-effect">
+            <div className="border-b border-border px-6 py-5">
+              <h2 className="text-lg font-semibold text-text-primary">Chat</h2>
+              <p className="mt-1 text-sm text-text-muted">Streaming responses, markdown rendering, and local message persistence.</p>
             </div>
-          </div>
-        </section>
-      </div>
-    </main>
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <ChatWindow 
+                messages={messages} 
+                isTyping={typingChatId !== null && typingChatId === activeChatId} 
+                onDeleteMessage={deleteMessage}
+                onEditMessage={editMessage}
+              />
+              <div className="border-t border-border px-6 pb-6 pt-4">
+                {error ? <p className="mb-3 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p> : null}
+                <MessageInput value={draft} onChange={setDraft} onSubmit={sendMessage} disabled={typingChatId !== null} />
+              </div>
+            </div>
+          </section>
+        </div>
+        <MemoryManager 
+          isOpen={isMemoryManagerOpen} 
+          onClose={() => setIsMemoryManagerOpen(false)} 
+          apiBase={API_BASE} 
+        />
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          theme={theme}
+          onThemeChange={toggleTheme}
+        />
+      </main>
+    </div>
   );
 }

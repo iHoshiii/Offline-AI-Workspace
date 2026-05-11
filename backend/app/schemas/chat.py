@@ -24,3 +24,9 @@ class ConversationDetail(BaseModel):
 
 class UpdateChatRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
+
+class SummarizeResponse(BaseModel):
+    summary: str
+
+class UpdateMessageRequest(BaseModel):
+    content: str = Field(..., min_length=1)

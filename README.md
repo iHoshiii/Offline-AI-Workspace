@@ -1,72 +1,48 @@
-﻿# Offline AI Workspace
+# Offline AI Workspace
 
-Offline AI Workspace is an offline-first productivity platform built for low-end hardware. It combines a lightweight local AI backend with a modern web frontend, optimized for CPU-only systems, minimal RAM usage, and fast startup.
+Offline AI Workspace is a high-performance, privacy-focused productivity platform designed for local hardware. It combines a professional glassmorphic interface with a powerful AI backend that remains 100% offline.
+
+---
+
+## Core Features
+
+*   **Semantic Long-Term Memory**: The AI remembers facts across different chat sessions using local vector embeddings.
+*   **Document Intelligence (RAG)**: Upload PDF, DOCX, or TXT files and interact with your documents locally.
+*   **System Awareness**: Real-time hardware monitoring and predictive file-system access allows the AI to understand your local workspace environment.
+*   **Premium User Experience**: A modern, glassmorphic design with optimized performance and responsive layouts.
+*   **Data Sovereignty**: All processing and storage occurs on your local machine. Includes a Memory Manager for granular control over AI knowledge.
+
+---
 
 ## Architecture
 
-- **Frontend:** Next.js + React + TypeScript + Tailwind CSS
-- **Backend:** FastAPI + Uvicorn + Python async patterns
-- **AI Runtime:** Ollama local inference
-- **Primary Model:** Phi-3 Mini
-- **Database:** SQLite
-- **Vector DB-ready:** Modular design allows ChromaDB integration later
+*   **Frontend:** Next.js 14, React, TypeScript, Tailwind CSS.
+*   **Backend:** FastAPI, Python Async, SQLite (Relational + Semantic Storage).
+*   **AI Engine:** [Ollama](https://ollama.com/) (Local LLM & Embedding generation).
 
-## Repository layout
+---
 
-- `frontend/`  client app with chat UI, markdown rendering, and streaming updates
-- `backend/`  FastAPI service with chat persistence and Ollama integration
-- `docs/`  roadmap and project notes
-- `.env.example`  shared environment configuration example
+## Repository Structure
 
-## Quick start
+*   `frontend/` - Next.js client application.
+*   `backend/` - FastAPI service and database logic.
+*   `docs/` - Detailed documentation and project roadmap.
 
-### Backend
+---
 
-1. Install Python 3.11+.
-2. Create a virtual environment and install dependencies:
-   ```powershell
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   pip install -r backend/requirements.txt
-   ```
-3. Run Ollama locally and verify the service is reachable:
-   ```powershell
-   ollama serve
-   ```
-4. Start the backend:
-   ```powershell
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-5. Verify health:
-   ```powershell
-   curl http://localhost:8000/health
-   ```
+## Getting Started
 
-> Note: Phase 1 currently uses SQLite for local chat persistence. MySQL can be added later if you need a dedicated server database.
+Detailed installation steps, navigation guides, and technical specifications are available in the documentation:
 
-### Frontend
+*   [How to Use Guide](./docs/how-to-use.md)
+*   [System Requirements](./docs/system-requirements.md)
+*   [Project Roadmap](./docs/roadmap)
 
-1. Install Node.js 20+.
-2. Install dependencies:
-   ```powershell
-   cd frontend
-   npm install
-   ```
-3. Start the frontend:
-   ```powershell
-   npm run dev
-   ```
-4. Open `http://localhost:3000`
+### Quick Execution
+1.  **Backend**: `cd backend && uvicorn app.main:app --reload`
+2.  **Frontend**: `cd frontend && npm run dev`
 
-## Design principles
+---
 
-- Lightweight, modular, and CPU-friendly.
-- Minimal external dependencies.
-- Streaming chat and markdown rendering.
-- Offline-first architecture with local SQLite persistence.
-
-## Future expansion
-
-- Add ChromaDB semantic memory and RAG document workflows.
-- Add AI tool calling and automation.
-- Add workspace sync, export, and security features.
+## Privacy and Data Control
+All information is stored in a local SQLite database (`workspace.db`). The system operates without telemetry, cloud synchronization, or external tracking. Users maintain full authority over their data through the integrated Memory Manager.

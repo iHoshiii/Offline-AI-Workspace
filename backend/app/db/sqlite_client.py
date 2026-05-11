@@ -1,4 +1,5 @@
 import asyncio
+import json
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,15 @@ CREATE TABLE IF NOT EXISTS messages (
     chat_id INTEGER NOT NULL,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS memories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    embedding TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
@@ -76,7 +86,7 @@ async def append_message(chat_id: int, role: str, content: str) -> int:
     return message_id
 
 async def get_messages(chat_id: int, limit: int = 20) -> list[dict[str, Any]]:
-    query = "SELECT role, content, created_at FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT ?"
+    query = "SELECT id, role, content, created_at FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT ?"
     rows = await _execute(query, (chat_id, limit), fetch_all=True)
     return [dict(row) for row in reversed(rows)]
 
@@ -92,7 +102,44 @@ async def delete_chat(chat_id: int) -> bool:
     await _execute(query, (chat_id,))
     return True
 
+async def delete_message(message_id: int) -> bool:
+    # First get the content so we can delete the corresponding memory
+    query_content = "SELECT content FROM messages WHERE id = ?"
+    row = await _execute(query_content, (message_id,), fetch_one=True)
+    if row:
+        content = row["content"]
+        # Delete message
+        await _execute("DELETE FROM messages WHERE id = ?", (message_id,))
+        # Delete memories that contain this content (best effort sync)
+        await _execute("DELETE FROM memories WHERE content LIKE ?", (f"%{content}%",))
+        return True
+    return False
+
 async def update_chat_title(chat_id: int, title: str) -> bool:
     query = "UPDATE chats SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
     await _execute(query, (title, chat_id))
+    return True
+
+async def add_memory(chat_id: int, content: str, embedding: list[float]) -> int:
+    query = "INSERT INTO memories (chat_id, content, embedding) VALUES (?, ?, ?)"
+    return await _execute(query, (chat_id, content, json.dumps(embedding)))
+
+async def list_all_memories() -> list[dict[str, Any]]:
+    query = "SELECT id, chat_id, content, embedding, created_at FROM memories ORDER BY created_at DESC"
+    rows = await _execute(query, fetch_all=True)
+    return [dict(row) for row in rows]
+
+async def delete_memory(memory_id: int) -> bool:
+    query = "DELETE FROM memories WHERE id = ?"
+    await _execute(query, (memory_id,))
+    return True
+
+async def clear_all_memories() -> bool:
+    query = "DELETE FROM memories"
+    await _execute(query)
+    return True
+
+async def update_message(message_id: int, content: str) -> bool:
+    query = "UPDATE messages SET content = ? WHERE id = ?"
+    await _execute(query, (content, message_id))
     return True

@@ -1,21 +1,38 @@
 import json
+import os
 from typing import AsyncGenerator
 import httpx
 from app.config import MODEL_NAME, OLLAMA_API_URL, MAX_HISTORY_MESSAGES
 from app.db.sqlite_client import get_messages
+from app.services.tool_service import tool_service
 
 SYSTEM_PROMPT = (
     "You are an efficient offline AI assistant optimized for low-end hardware. "
-    "Answer clearly, stay concise, and avoid unnecessary verbosity."
+    "Answer clearly, stay concise, and avoid unnecessary verbosity.\n\n"
 )
 
 class OllamaClient:
     def __init__(self) -> None:
         self.client = httpx.AsyncClient(timeout=None)
 
-    async def build_prompt(self, chat_id: int, user_input: str) -> str:
+    async def build_prompt(self, chat_id: int, user_input: str, memories: str = "") -> str:
         messages = await get_messages(chat_id, limit=MAX_HISTORY_MESSAGES)
-        prompt_lines = [SYSTEM_PROMPT, ""]
+        
+        system_info = tool_service.get_system_info()
+        local_files = tool_service.list_files()
+        
+        # Predictive File Injection: If user mentions a file, read it!
+        file_context = ""
+        for filename in os.listdir("."):
+            if filename.lower() in user_input.lower() and os.path.isfile(filename):
+                file_context += f"\n\n[FILE PREVIEW: {filename}]\n{tool_service.read_file(filename)}"
+
+        system_text = SYSTEM_PROMPT + f"System Information:\n{system_info}\n\nLocal Files (Current Directory):\n{local_files}{file_context}"
+        
+        if memories:
+            system_text += f"\n\nRelevant context from past conversations:\n{memories}"
+            
+        prompt_lines = [system_text, ""]
         for message in messages:
             role = "User" if message["role"] == "user" else "Assistant"
             prompt_lines.append(f"{role}: {message['content']}")
@@ -23,8 +40,8 @@ class OllamaClient:
         prompt_lines.append("Assistant:")
         return "\n".join(prompt_lines)
 
-    async def stream_completion(self, chat_id: int, user_input: str, temperature: float, max_tokens: int) -> AsyncGenerator[str, None]:
-        prompt = await self.build_prompt(chat_id, user_input)
+    async def stream_completion(self, chat_id: int, user_input: str, temperature: float, max_tokens: int, memories: str = "") -> AsyncGenerator[str, None]:
+        prompt = await self.build_prompt(chat_id, user_input, memories)
         url = f"{OLLAMA_API_URL}/api/generate"
         payload = {
             "model": MODEL_NAME,
@@ -53,6 +70,31 @@ class OllamaClient:
                 
                 if payload_chunk.get("done"):
                     break
+
+    async def get_completion(self, prompt: str, temperature: float = 0.7, max_tokens: int = 500) -> str:
+        url = f"{OLLAMA_API_URL}/api/generate"
+        payload = {
+            "model": MODEL_NAME,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            }
+        }
+        response = await self.client.post(url, json=payload)
+        response.raise_for_status()
+        return response.json().get("response", "")
+
+    async def get_embeddings(self, text: str) -> list[float]:
+        url = f"{OLLAMA_API_URL}/api/embeddings"
+        payload = {
+            "model": MODEL_NAME,
+            "prompt": text,
+        }
+        response = await self.client.post(url, json=payload)
+        response.raise_for_status()
+        return response.json()["embedding"]
 
     async def close(self) -> None:
         await self.client.aclose()

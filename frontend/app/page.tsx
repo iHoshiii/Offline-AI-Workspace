@@ -40,6 +40,42 @@ export default function HomePage() {
       .catch(() => setConversations([]));
   }, []);
 
+  useEffect(() => {
+    const handleUpload = async (e: any) => {
+      const file = e.detail;
+      if (!activeChatId) {
+        setError('Please select or create a chat first.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch(`${API_BASE}/chat/conversations/${activeChatId}/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          setMessages((prev) => [...prev, { 
+            role: 'assistant', 
+            content: `📄 Document "${file.name}" has been processed and added to this chat's memory.`,
+            created_at: new Date().toISOString()
+          }]);
+        } else {
+          setError(data.detail || 'Upload failed');
+        }
+      } catch (err) {
+        console.error(err);
+        setError('Error uploading file');
+      }
+    };
+
+    window.addEventListener('upload-file', handleUpload);
+    return () => window.removeEventListener('upload-file', handleUpload);
+  }, [activeChatId]);
+
   const activeConversation = useMemo(
     () => conversations.find((conversation) => conversation.id === activeChatId) ?? null,
     [conversations, activeChatId],

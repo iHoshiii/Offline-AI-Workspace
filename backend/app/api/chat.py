@@ -1,10 +1,11 @@
 import json
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
 from app.db.sqlite_client import append_message, create_chat, delete_chat, get_chat, get_messages, list_chats, update_chat_title
 from app.schemas.chat import ChatRequest, ChatSummary, ConversationDetail, UpdateChatRequest
 from app.services.ollama_client import ollama_client
 from app.services.memory_service import memory_service
+from app.services.document_service import document_service
 
 router = APIRouter(prefix="/chat")
 
@@ -78,3 +79,16 @@ async def rename_conversation(chat_id: int, request: UpdateChatRequest):
         raise HTTPException(status_code=404, detail="Chat not found.")
     await update_chat_title(chat_id, request.title)
     return {"status": "success", "message": "Conversation renamed."}
+
+@router.post("/conversations/{chat_id}/upload")
+async def upload_document(chat_id: int, file: UploadFile = File(...)):
+    chat = await get_chat(chat_id)
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Chat not found.")
+    
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    
+    content = await file.read()
+    await document_service.process_pdf(chat_id, content)
+    return {"status": "success", "message": f"Document '{file.filename}' processed and added to chat memory."}

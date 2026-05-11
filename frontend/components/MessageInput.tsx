@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+
 type MessageInputProps = {
   value: string;
   onChange: (value: string) => void;
@@ -6,8 +8,34 @@ type MessageInputProps = {
 };
 
 export function MessageInput({ value, onChange, onSubmit, disabled }: MessageInputProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // We will handle the upload logic in page.tsx
+      const event = new CustomEvent('upload-file', { detail: file });
+      window.dispatchEvent(event);
+    }
+  };
+
   return (
     <div className="mt-4 flex w-full items-end gap-3 rounded-3xl border border-slate-700 bg-surface p-4">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".pdf"
+        className="hidden"
+      />
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-800 text-slate-400 transition hover:bg-slate-700 hover:text-slate-100"
+        title="Upload PDF"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </button>
       <textarea
         value={value}
         rows={2}
@@ -20,7 +48,7 @@ export function MessageInput({ value, onChange, onSubmit, disabled }: MessageInp
           }
         }}
         className="min-h-[72px] w-full resize-none rounded-2xl border border-slate-700 bg-surface px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
-        placeholder="Ask anything…"
+        placeholder="Ask anything or upload a PDF…"
       />
       <button
         type="button"

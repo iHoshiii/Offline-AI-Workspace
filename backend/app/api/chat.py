@@ -1,4 +1,5 @@
 import json
+import asyncio
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
 from app.db.sqlite_client import append_message, clear_all_memories, create_chat, delete_chat, delete_message, delete_memory, get_chat, get_messages, list_chats, list_all_memories, update_chat_title, update_message
@@ -19,7 +20,19 @@ async def _stream_response_generator(chat_id: int, user_message: str, temperatur
             yield json.dumps({"type": "chunk", "text": chunk}) + "\n"
     except Exception as exc:
         yield json.dumps({"type": "error", "message": str(exc)}) + "\n"
-        return
+    except asyncio.CancelledError:
+        # Save partial text if stream was cancelled by user
+        trimmed = assistant_text.strip()
+        if trimmed:
+            await append_message(chat_id, "assistant", trimmed)
+            await memory_service.save_interaction(chat_id, user_message, trimmed)
+        raise
+    finally:
+        trimmed = assistant_text.strip()
+        if trimmed:
+            # Check if it was already saved in CancelledError
+            # (Normally this block only runs if NOT cancelled)
+            pass 
 
     trimmed = assistant_text.strip()
     if trimmed:

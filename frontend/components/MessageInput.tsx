@@ -4,18 +4,18 @@ type MessageInputProps = {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
+  onStop?: () => void;
   disabled?: boolean;
 };
 
-export function MessageInput({ value, onChange, onSubmit, disabled }: MessageInputProps) {
+export function MessageInput({ value, onChange, onSubmit, onStop, disabled }: MessageInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // We will handle the upload logic in page.tsx
-      const event = new CustomEvent('upload-file', { detail: file });
-      window.dispatchEvent(event);
+      const uploadEvent = new CustomEvent('upload-file', { detail: file });
+      window.dispatchEvent(uploadEvent);
     }
   };
 
@@ -46,16 +46,15 @@ export function MessageInput({ value, onChange, onSubmit, disabled }: MessageInp
         <textarea
           value={value}
           rows={1}
-          disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
+            if (event.key === 'Enter' && !event.shiftKey && !disabled) {
               event.preventDefault();
               onSubmit();
             }
           }}
           className="max-h-48 min-h-[44px] w-full resize-none bg-transparent px-2 py-3 text-[15px] leading-relaxed text-text-primary placeholder:text-text-muted/50 outline-none"
-          placeholder="Ask your local AI..."
+          placeholder={disabled ? "AI is typing..." : "Ask your local AI..."}
           onInput={(e) => {
             const target = e.target as HTMLTextAreaElement;
             target.style.height = 'auto';
@@ -63,17 +62,34 @@ export function MessageInput({ value, onChange, onSubmit, disabled }: MessageInp
           }}
         />
 
-        <button
-          type="button"
-          disabled={disabled || !value.trim()}
-          onClick={onSubmit}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-white transition-all hover:scale-105 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-        </button>
+        {disabled ? (
+          <button
+            type="button"
+            onClick={onStop}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-500 text-white transition-all hover:scale-105 hover:bg-rose-600 shadow-lg shadow-rose-500/20"
+            title="Stop generating"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="6" width="12" height="12" rx="2" />
+            </svg>
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={!value.trim()}
+            onClick={onSubmit}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-white transition-all hover:scale-105 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
+            title="Send message"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        )}
       </div>
       <p className="px-4 text-[10px] text-text-muted text-center uppercase tracking-widest">
-        Local & Private · {disabled ? 'Processing...' : 'Ready'}
+        Local & Private · {disabled ? 'AI is generating response' : 'Ready to chat'}
       </p>
     </div>
   );

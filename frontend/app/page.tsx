@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { ChatWindow } from '../components/ChatWindow';
 import { MessageInput } from '../components/MessageInput';
 import { Sidebar } from '../components/Sidebar';
@@ -42,6 +42,8 @@ export default function HomePage() {
   const [isMemoryManagerOpen, setIsMemoryManagerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeType>('dark');
+  
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Load theme from localStorage on mount
   useEffect(() => {
@@ -88,14 +90,12 @@ export default function HomePage() {
         return;
       }
 
-      // Add a User message showing the file being sent
       setMessages((prev) => [...prev, { 
         role: 'user', 
         content: `📄 **Attached File:** ${file.name}`,
         created_at: new Date().toISOString()
       }]);
 
-      // Add a temporary processing message from Assistant
       setMessages((prev) => [...prev, { 
         role: 'assistant', 
         content: `⏳ Processing "${file.name}"... please wait.`,
@@ -145,6 +145,15 @@ export default function HomePage() {
     [conversations, activeChatId],
   );
 
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setTypingChatId(null);
+      setError('Generation stopped by user.');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
   const sendMessage = async () => {
     if (!draft.trim()) return;
     setError(null);
@@ -157,11 +166,18 @@ export default function HomePage() {
     setDraft('');
     setTypingChatId(activeChatId);
 
+    // Initialize AbortController
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    let lastChatId = activeChatId;
+
     try {
       const response = await fetch(`${API_BASE}/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: activeChatId, message: userMessage.content }),
+        signal: controller.signal,
       });
 
       if (!response.body) {
@@ -172,7 +188,6 @@ export default function HomePage() {
       const decoder = new TextDecoder();
       let buffer = '';
       let assistantDraft = '';
-      let lastChatId = activeChatId;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -245,10 +260,19 @@ export default function HomePage() {
       
       if (lastChatId) fetchMessages(lastChatId);
       
-    } catch (err) {
-      setError((err as Error).message ?? 'Unable to connect to backend.');
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        console.log('Stream aborted');
+        // Give the backend a small window to finish saving the partial message
+        setTimeout(() => {
+          if (lastChatId) fetchMessages(lastChatId);
+        }, 500);
+      } else {
+        setError(err.message ?? 'Unable to connect to backend.');
+      }
     } finally {
       setTypingChatId(null);
+      abortControllerRef.current = null;
     }
   };
 
@@ -316,7 +340,6 @@ export default function HomePage() {
     if (!activeChatId || !messageId) return;
     
     try {
-      // Optimistic UI removal
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
       
       const res = await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, {
@@ -396,7 +419,13 @@ export default function HomePage() {
               />
               <div className="border-t border-border px-6 pb-6 pt-4">
                 {error ? <p className="mb-3 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p> : null}
-                <MessageInput value={draft} onChange={setDraft} onSubmit={sendMessage} disabled={typingChatId !== null} />
+                <MessageInput 
+                  value={draft} 
+                  onChange={setDraft} 
+                  onSubmit={sendMessage} 
+                  onStop={stopGeneration}
+                  disabled={typingChatId !== null} 
+                />
               </div>
             </div>
           </section>

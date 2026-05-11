@@ -32,7 +32,7 @@ export default function HomePage() {
   const [activeChatId, setActiveChatId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [typingChatId, setTypingChatId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isMemoryManagerOpen, setIsMemoryManagerOpen] = useState(false);
 
@@ -118,7 +118,7 @@ export default function HomePage() {
     };
     setMessages((prev) => [...prev, userMessage]);
     setDraft('');
-    setIsTyping(true);
+    setTypingChatId(activeChatId);
 
     try {
       const response = await fetch(`${API_BASE}/chat/stream`, {
@@ -150,8 +150,9 @@ export default function HomePage() {
           try {
             const payload = JSON.parse(line) as ChatChunk;
             if (payload.type === 'meta' && typeof payload.chat_id === 'number') {
-              setActiveChatId(payload.chat_id);
               const chatId = payload.chat_id;
+              setActiveChatId(chatId);
+              setTypingChatId(chatId);
               setConversations((prev) => {
                 if (prev.some((item) => item.id === chatId)) return prev;
                 return [{ id: chatId, title: userMessage.content.slice(0, 80) }, ...prev];
@@ -184,7 +185,7 @@ export default function HomePage() {
     } catch (err) {
       setError((err as Error).message ?? 'Unable to connect to backend.');
     } finally {
-      setIsTyping(false);
+      setTypingChatId(null);
     }
   };
 
@@ -237,7 +238,7 @@ export default function HomePage() {
   };
 
   const summarizeConversation = async (conversationId: number) => {
-    setIsTyping(true);
+    setTypingChatId(conversationId);
     setMessages((prev) => [...prev, { 
       role: 'assistant', 
       content: '⏳ Summarizing conversation...', 
@@ -265,7 +266,7 @@ export default function HomePage() {
       setError('Failed to summarize conversation.');
       setMessages((prev) => prev.slice(0, -1));
     } finally {
-      setIsTyping(false);
+      setTypingChatId(null);
     }
   };
   const deleteMessage = async (messageId: number) => {
@@ -310,10 +311,14 @@ export default function HomePage() {
             <p className="mt-1 text-sm text-slate-400">Streaming responses, markdown rendering, and local message persistence.</p>
           </div>
           <div className="flex flex-1 flex-col overflow-hidden">
-            <ChatWindow messages={messages} isTyping={isTyping} onDeleteMessage={deleteMessage} />
+            <ChatWindow 
+              messages={messages} 
+              isTyping={typingChatId !== null && typingChatId === activeChatId} 
+              onDeleteMessage={deleteMessage} 
+            />
             <div className="border-t border-slate-800 px-6 pb-6 pt-4">
               {error ? <p className="mb-3 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p> : null}
-              <MessageInput value={draft} onChange={setDraft} onSubmit={sendMessage} disabled={isTyping} />
+              <MessageInput value={draft} onChange={setDraft} onSubmit={sendMessage} disabled={typingChatId !== null} />
             </div>
           </div>
         </section>

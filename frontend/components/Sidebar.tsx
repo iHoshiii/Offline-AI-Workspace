@@ -79,7 +79,13 @@ export function Sidebar({
       </div>
 
       <div className="space-y-2 overflow-y-auto">
-        {conversations.length === 0 ? (
+        {activeConversationId === null && (
+          <div className="group relative flex flex-col gap-1 w-full rounded-2xl border border-accent bg-surface3 p-4 text-left transition animate-pulse">
+            <p className="flex-1 truncate font-medium text-white italic opacity-70">New Conversation...</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest">Waiting for first message</p>
+          </div>
+        )}
+        {conversations.length === 0 && activeConversationId !== null ? (
           <div className="rounded-2xl bg-surface p-4 text-sm text-slate-400">
             No conversations yet. Start a new chat.
           </div>

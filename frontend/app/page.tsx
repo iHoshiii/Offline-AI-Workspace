@@ -39,13 +39,21 @@ export default function HomePage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
+  // Load theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('app-theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.documentElement.classList.toggle('light', savedTheme === 'light');
+    }
+  }, []);
+
   const toggleTheme = (newTheme: 'light' | 'dark') => {
     setTheme(newTheme);
-    if (newTheme === 'light') {
-      document.documentElement.classList.add('light');
-    } else {
-      document.documentElement.classList.remove('light');
-    }
+    localStorage.setItem('app-theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    document.documentElement.classList.toggle('light', newTheme === 'light');
   };
 
   useEffect(() => {
@@ -304,49 +312,51 @@ export default function HomePage() {
   };
 
   return (
-    <main className="min-h-screen bg-background text-text-primary">
-      <div className="mx-auto flex h-screen max-w-[1600px] gap-6 overflow-hidden px-4 py-5 sm:px-6">
-        <Sidebar
-          conversations={conversations}
-          activeConversationId={activeChatId}
-          onSelectConversation={selectConversation}
-          onCreateConversation={createNewConversation}
-          onDeleteConversation={deleteConversation}
-          onRenameConversation={renameConversation}
-          onSummarizeConversation={summarizeConversation}
-          onClearMemories={clearAllMemories}
-          onOpenMemoryManager={() => setIsMemoryManagerOpen(true)}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-        />
-        <section className="flex flex-1 flex-col rounded-[32px] border border-border bg-surface3 shadow-premium glass-effect">
-          <div className="border-b border-border px-6 py-5">
-            <h2 className="text-lg font-semibold text-text-primary">Chat</h2>
-            <p className="mt-1 text-sm text-text-muted">Streaming responses, markdown rendering, and local message persistence.</p>
-          </div>
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <ChatWindow 
-              messages={messages} 
-              isTyping={typingChatId !== null && typingChatId === activeChatId} 
-              onDeleteMessage={deleteMessage} 
-            />
-            <div className="border-t border-border px-6 pb-6 pt-4">
-              {error ? <p className="mb-3 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p> : null}
-              <MessageInput value={draft} onChange={setDraft} onSubmit={sendMessage} disabled={typingChatId !== null} />
+    <div data-theme={theme} className={theme}>
+      <main className="min-h-screen bg-background text-text-primary transition-colors duration-300">
+        <div className="mx-auto flex h-screen max-w-[1600px] gap-6 overflow-hidden px-4 py-5 sm:px-6">
+          <Sidebar
+            conversations={conversations}
+            activeConversationId={activeChatId}
+            onSelectConversation={selectConversation}
+            onCreateConversation={createNewConversation}
+            onDeleteConversation={deleteConversation}
+            onRenameConversation={renameConversation}
+            onSummarizeConversation={summarizeConversation}
+            onClearMemories={clearAllMemories}
+            onOpenMemoryManager={() => setIsMemoryManagerOpen(true)}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
+          <section className="flex flex-1 flex-col rounded-[32px] border border-border bg-surface shadow-premium glass-effect">
+            <div className="border-b border-border px-6 py-5">
+              <h2 className="text-lg font-semibold text-text-primary">Chat</h2>
+              <p className="mt-1 text-sm text-text-muted">Streaming responses, markdown rendering, and local message persistence.</p>
             </div>
-          </div>
-        </section>
-      </div>
-      <MemoryManager 
-        isOpen={isMemoryManagerOpen} 
-        onClose={() => setIsMemoryManagerOpen(false)} 
-        apiBase={API_BASE} 
-      />
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        theme={theme}
-        onThemeChange={toggleTheme}
-      />
-    </main>
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <ChatWindow 
+                messages={messages} 
+                isTyping={typingChatId !== null && typingChatId === activeChatId} 
+                onDeleteMessage={deleteMessage} 
+              />
+              <div className="border-t border-border px-6 pb-6 pt-4">
+                {error ? <p className="mb-3 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p> : null}
+                <MessageInput value={draft} onChange={setDraft} onSubmit={sendMessage} disabled={typingChatId !== null} />
+              </div>
+            </div>
+          </section>
+        </div>
+        <MemoryManager 
+          isOpen={isMemoryManagerOpen} 
+          onClose={() => setIsMemoryManagerOpen(false)} 
+          apiBase={API_BASE} 
+        />
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          theme={theme}
+          onThemeChange={toggleTheme}
+        />
+      </main>
+    </div>
   );
 }

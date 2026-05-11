@@ -51,6 +51,13 @@ export default function HomePage() {
       const formData = new FormData();
       formData.append('file', file);
 
+      // Add a temporary processing message
+      setMessages((prev) => [...prev, { 
+        role: 'assistant', 
+        content: `⏳ Processing "${file.name}"... please wait.`,
+        created_at: new Date().toISOString()
+      }]);
+
       try {
         const res = await fetch(`${API_BASE}/chat/conversations/${activeChatId}/upload`, {
           method: 'POST',
@@ -58,17 +65,34 @@ export default function HomePage() {
         });
         const data = await res.json();
         if (data.status === 'success') {
-          setMessages((prev) => [...prev, { 
-            role: 'assistant', 
-            content: `📄 Document "${file.name}" has been processed and added to this chat's memory.`,
-            created_at: new Date().toISOString()
-          }]);
+          setMessages((prev) => [
+            ...prev.slice(0, -1), // Remove the "Processing..." message
+            { 
+              role: 'assistant', 
+              content: `✅ Document "${file.name}" has been processed and added to this chat's memory.`,
+              created_at: new Date().toISOString()
+            }
+          ]);
         } else {
-          setError(data.detail || 'Upload failed');
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            { 
+              role: 'assistant', 
+              content: `❌ Upload failed: ${data.detail || 'Unknown error'}`,
+              created_at: new Date().toISOString()
+            }
+          ]);
         }
       } catch (err) {
         console.error(err);
-        setError('Error uploading file');
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          { 
+            role: 'assistant', 
+            content: `❌ Error uploading file. Please try again.`,
+            created_at: new Date().toISOString()
+          }
+        ]);
       }
     };
 

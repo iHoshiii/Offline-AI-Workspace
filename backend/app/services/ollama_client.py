@@ -3,10 +3,11 @@ from typing import AsyncGenerator
 import httpx
 from app.config import MODEL_NAME, OLLAMA_API_URL, MAX_HISTORY_MESSAGES
 from app.db.sqlite_client import get_messages
+from app.services.tool_service import tool_service
 
 SYSTEM_PROMPT = (
     "You are an efficient offline AI assistant optimized for low-end hardware. "
-    "Answer clearly, stay concise, and avoid unnecessary verbosity."
+    "Answer clearly, stay concise, and avoid unnecessary verbosity.\n\n"
 )
 
 class OllamaClient:
@@ -16,7 +17,9 @@ class OllamaClient:
     async def build_prompt(self, chat_id: int, user_input: str, memories: str = "") -> str:
         messages = await get_messages(chat_id, limit=MAX_HISTORY_MESSAGES)
         
-        system_text = SYSTEM_PROMPT
+        system_info = tool_service.get_system_info()
+        system_text = SYSTEM_PROMPT + f"System Information:\n{system_info}"
+        
         if memories:
             system_text += f"\n\nRelevant context from past conversations:\n{memories}"
             

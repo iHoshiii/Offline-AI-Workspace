@@ -86,9 +86,16 @@ async def upload_document(chat_id: int, file: UploadFile = File(...)):
     if chat is None:
         raise HTTPException(status_code=404, detail="Chat not found.")
     
-    if not file.filename.endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    if file.filename.endswith('.pdf'):
+        content = await file.read()
+        await document_service.process_pdf(chat_id, content)
+    elif file.filename.endswith(('.txt', '.md')):
+        content = await file.read()
+        await document_service.process_text(chat_id, content.decode('utf-8'))
+    elif file.filename.endswith('.docx'):
+        content = await file.read()
+        await document_service.process_docx(chat_id, content)
+    else:
+        raise HTTPException(status_code=400, detail="Only PDF, TXT, MD, and DOCX files are supported.")
     
-    content = await file.read()
-    await document_service.process_pdf(chat_id, content)
     return {"status": "success", "message": f"Document '{file.filename}' processed and added to chat memory."}

@@ -21,14 +21,19 @@ class DocumentService:
         await self._store_chunks(chat_id, full_text)
 
     async def _store_chunks(self, chat_id: int, full_text: str):
+        import asyncio
         # Simple chunking by paragraph or fixed length
-        chunks = self._chunk_text(full_text, chunk_size=1000)
+        chunks = [c for c in self._chunk_text(full_text, chunk_size=1000) if c.strip()]
         
-        for chunk in chunks:
-            if not chunk.strip():
-                continue
+        async def process_chunk(chunk):
             embedding = await ollama_client.get_embeddings(chunk)
             await add_memory(chat_id, f"Document: {chunk}", embedding)
+            
+        # Process in batches to avoid overwhelming Ollama
+        batch_size = 5
+        for i in range(0, len(chunks), batch_size):
+            batch = chunks[i:i + batch_size]
+            await asyncio.gather(*(process_chunk(chunk) for chunk in batch))
 
     def _chunk_text(self, text: str, chunk_size: int) -> list[str]:
         words = text.split()

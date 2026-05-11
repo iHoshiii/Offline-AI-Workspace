@@ -20,7 +20,10 @@ export function ChatWindow({ messages, isTyping }: ChatWindowProps) {
         {messages.map((message, index) => {
           const isUser = message.role === 'user';
           return (
-            <div key={`${message.created_at}-${index}`} className="rounded-3xl border border-slate-800 bg-surface3 p-4 shadow-soft">
+            <div 
+              key={`${message.created_at}-${index}`} 
+              className="rounded-3xl border border-slate-800 bg-surface3 p-4 shadow-soft animate-message"
+            >
               <div className="mb-2 flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-slate-500">
                 <span>{isUser ? 'You' : 'Assistant'}</span>
                 <span>{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>

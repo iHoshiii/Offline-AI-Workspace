@@ -62,6 +62,21 @@ class OllamaClient:
                 if payload_chunk.get("done"):
                     break
 
+    async def get_completion(self, prompt: str, temperature: float = 0.7, max_tokens: int = 500) -> str:
+        url = f"{OLLAMA_API_URL}/api/generate"
+        payload = {
+            "model": MODEL_NAME,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            }
+        }
+        response = await self.client.post(url, json=payload)
+        response.raise_for_status()
+        return response.json().get("response", "")
+
     async def get_embeddings(self, text: str) -> list[float]:
         url = f"{OLLAMA_API_URL}/api/embeddings"
         payload = {

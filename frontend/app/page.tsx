@@ -233,6 +233,39 @@ export default function HomePage() {
     }
   };
 
+  const summarizeConversation = async (conversationId: number) => {
+    setIsTyping(true);
+    setMessages((prev) => [...prev, { 
+      role: 'assistant', 
+      content: '⏳ Summarizing conversation...', 
+      created_at: new Date().toISOString() 
+    }]);
+
+    try {
+      const response = await fetch(`${API_BASE}/chat/conversations/${conversationId}/summarize`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+      if (data.summary) {
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          { 
+            role: 'assistant', 
+            content: `### 📝 Chat Summary\n\n${data.summary}`, 
+            created_at: new Date().toISOString() 
+          }
+        ]);
+      } else {
+        throw new Error('Summary not found.');
+      }
+    } catch (err) {
+      setError('Failed to summarize conversation.');
+      setMessages((prev) => prev.slice(0, -1));
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-surface text-slate-100">
       <div className="mx-auto flex h-screen max-w-[1600px] gap-6 overflow-hidden px-4 py-5 sm:px-6">
@@ -243,8 +276,9 @@ export default function HomePage() {
           onCreateConversation={createNewConversation}
           onDeleteConversation={deleteConversation}
           onRenameConversation={renameConversation}
+          onSummarizeConversation={summarizeConversation}
         />
-        <section className="flex flex-1 flex-col rounded-[32px] border border-slate-800 bg-surface3 shadow-soft">
+        <section className="flex flex-1 flex-col rounded-[32px] border border-slate-800 bg-surface3 shadow-premium glass-effect">
           <div className="border-b border-slate-800 px-6 py-5">
             <h2 className="text-lg font-semibold text-slate-100">Chat</h2>
             <p className="mt-1 text-sm text-slate-400">Streaming responses, markdown rendering, and local message persistence.</p>

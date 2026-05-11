@@ -12,6 +12,7 @@ type SidebarProps = {
   onCreateConversation: () => void;
   onDeleteConversation: (conversationId: number) => void;
   onRenameConversation: (conversationId: number, newTitle: string) => void;
+  onSummarizeConversation: (conversationId: number) => void;
 };
 
 export function Sidebar({
@@ -44,21 +45,32 @@ export function Sidebar({
   };
 
   return (
-    <aside className="h-full w-full max-w-xs border-r border-slate-800 bg-surface2 px-4 py-5 text-sm text-slate-200">
+    <aside className="h-full w-full max-w-xs border-r border-slate-800 bg-surface2 px-4 py-5 text-sm text-slate-200 flex flex-col glass-effect rounded-[32px] overflow-hidden">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Conversations</p>
           <h1 className="mt-2 text-lg font-semibold">Workspace</h1>
         </div>
-        <button
-          className="rounded-full bg-accent px-3 py-1 text-sm font-medium text-slate-950 transition hover:bg-sky-300"
-          onClick={(event: MouseEvent<HTMLButtonElement>) => {
-            event.preventDefault();
-            onCreateConversation();
-          }}
-        >
-          New
-        </button>
+        <div className="flex gap-2">
+          {activeConversationId && (
+            <button
+              title="Summarize current chat"
+              className="rounded-full bg-surface3 border border-slate-700 px-3 py-1 text-sm font-medium text-slate-300 transition hover:bg-slate-700"
+              onClick={() => onSummarizeConversation(activeConversationId)}
+            >
+              Σ
+            </button>
+          )}
+          <button
+            className="rounded-full bg-accent px-3 py-1 text-sm font-medium text-slate-950 transition hover:bg-sky-300"
+            onClick={(event: MouseEvent<HTMLButtonElement>) => {
+              event.preventDefault();
+              onCreateConversation();
+            }}
+          >
+            New
+          </button>
+        </div>
       </div>
 
       <div className="space-y-2 overflow-y-auto">
@@ -119,7 +131,7 @@ export function Sidebar({
         )}
       </div>
 
-      <div className="mt-auto border-t border-slate-800 pt-4">
+      <div className="mt-auto border-t border-slate-800/50 pt-4">
         <button className="flex w-full items-center gap-3 rounded-2xl p-4 text-slate-400 transition hover:bg-surface3 hover:text-white">
           <span>⚙</span>
           <span className="font-medium">Settings</span>

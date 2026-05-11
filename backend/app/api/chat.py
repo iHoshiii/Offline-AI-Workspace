@@ -99,3 +99,24 @@ async def upload_document(chat_id: int, file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Only PDF, TXT, MD, and DOCX files are supported.")
     
     return {"status": "success", "message": f"Document '{file.filename}' processed and added to chat memory."}
+    
+@router.post("/conversations/{chat_id}/summarize")
+async def summarize_conversation(chat_id: int):
+    chat = await get_chat(chat_id)
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Chat not found.")
+    
+    messages = await get_messages(chat_id, limit=100)
+    if not messages:
+        return {"summary": "No messages to summarize."}
+    
+    chat_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+    prompt = (
+        "You are an expert summarizer. Please provide a concise, bullet-pointed summary of the following conversation. "
+        "Focus on the key questions asked and the main conclusions reached.\n\n"
+        f"Conversation:\n{chat_text}\n\n"
+        "Summary:"
+    )
+    
+    summary = await ollama_client.get_completion(prompt, temperature=0.3, max_tokens=300)
+    return {"summary": summary.strip()}

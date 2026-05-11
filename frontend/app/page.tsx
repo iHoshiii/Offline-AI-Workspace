@@ -140,6 +140,11 @@ export default function HomePage() {
     return () => window.removeEventListener('upload-file', handleUpload);
   }, [activeChatId]);
 
+  const activeConversation = useMemo(
+    () => conversations.find((conversation) => conversation.id === activeChatId) ?? null,
+    [conversations, activeChatId],
+  );
+
   const sendMessage = async () => {
     if (!draft.trim()) return;
     setError(null);
@@ -287,51 +292,40 @@ export default function HomePage() {
     }
   };
 
-  const editMessage = async (messageId: any, newContent: string) => {
-    if (!activeChatId) return;
+  const editMessage = async (messageId: number, newContent: string) => {
+    if (!activeChatId || !messageId) return;
     try {
-      await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, {
+      const res = await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: newContent }),
       });
+      
+      if (!res.ok) throw new Error('Edit failed');
+
       setMessages((prev) => 
-        prev.map((m) => (m.id == messageId || m.created_at == messageId ? { ...m, content: newContent } : m))
+        prev.map((m) => (m.id === messageId ? { ...m, content: newContent } : m))
       );
-    } catch {
-      setError('Failed to update message.');
+    } catch (err) {
+      setError('Failed to update message. Re-syncing...');
+      if (activeChatId) fetchMessages(activeChatId);
     }
   };
 
-  const deleteMessage = async (messageId: any) => {
+  const deleteMessage = async (messageId: number) => {
     if (!activeChatId || !messageId) return;
     
-    // Convert to number if possible for the check
-    const numericId = Number(messageId);
-    const isRealDbId = !isNaN(numericId) && numericId > 0;
-
     try {
-      // 1. Optimistic UI removal: Works for both database IDs and timestamps
-      setMessages((prev) => prev.filter((m) => {
-        const idMatch = m.id != null && m.id == messageId;
-        const timeMatch = m.created_at != null && m.created_at == messageId;
-        return !idMatch && !timeMatch;
-      }));
+      // Optimistic UI removal
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
       
-      // 2. Persistent Backend removal: ONLY if it's a real database ID
-      if (isRealDbId) {
-        const response = await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${numericId}`, {
-          method: 'DELETE',
-        });
-        
-        if (!response.ok) {
-          throw new Error('Backend failed to delete message');
-        }
-      }
+      const res = await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!res.ok) throw new Error('Delete failed');
     } catch (err) {
-      console.error('Deletion error:', err);
-      setError('Failed to permanently delete message. Restoring chat...');
-      // Re-fetch to restore the message if the backend failed
+      setError('Failed to delete message. Re-syncing...');
       if (activeChatId) fetchMessages(activeChatId);
     }
   };

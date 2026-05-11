@@ -11,8 +11,8 @@ type Message = {
 type ChatWindowProps = {
   messages: Message[];
   isTyping: boolean;
-  onDeleteMessage: (messageId: any) => void;
-  onEditMessage: (messageId: any, newContent: string) => void;
+  onDeleteMessage: (messageId: number) => void;
+  onEditMessage: (messageId: number, newContent: string) => void;
 };
 
 const renderMarkdown = (markdown: string) => ({ __html: marked.parse(markdown) });
@@ -26,16 +26,14 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
   const [editContent, setEditContent] = useState('');
 
   const startEditing = (message: Message) => {
-    // Use message.id if it exists, otherwise fallback to created_at
-    const idToUse = message.id || message.created_at;
-    setEditingId(idToUse);
+    if (!message.id) return; // Wait for sync
+    setEditingId(message.id);
     setEditContent(message.content);
   };
 
   const handleSaveEdit = () => {
-    const realId = messages.find(m => (m.id || m.created_at) == editingId)?.id;
-    if (realId && editContent.trim()) {
-      onEditMessage(realId, editContent.trim());
+    if (editingId && editContent.trim()) {
+      onEditMessage(editingId, editContent.trim());
     }
     setEditingId(null);
   };
@@ -45,8 +43,8 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
       <div className="space-y-6 overflow-y-auto pr-2">
         {messages.map((message, index) => {
           const isUser = message.role === 'user';
-          const currentId = message.id || message.created_at;
-          const isEditing = editingId == currentId;
+          const isSyncing = !message.id;
+          const isEditing = editingId && editingId == message.id;
           const isFileMessage = message.content.includes('📄') || message.content.includes('✅ Document');
 
           return (
@@ -59,6 +57,7 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
                 <span>{isUser ? 'You' : 'AI Assistant'}</span>
                 <span className="opacity-30">•</span>
                 <span>{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                {isSyncing && <span className="ml-2 text-accent animate-pulse">Syncing...</span>}
               </div>
 
               <div className={`max-w-[85%] min-w-[160px] rounded-[24px] p-5 shadow-premium border relative transition-all group-hover:shadow-xl ${
@@ -66,31 +65,21 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
                   ? 'bg-accent text-white border-accent/20' 
                   : 'bg-surface2 text-text-primary border-border'
               }`}>
-                {/* Floating Action Pill */}
-                {!isEditing && (
+                {/* Floating Action Pill - Only shows when synced */}
+                {!isEditing && !isSyncing && (
                   <div className="absolute -top-3 right-4 flex items-center gap-1 bg-surface3 border border-border rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 z-20">
                     <button
-                      onClick={(e) => { 
-                        e.preventDefault();
-                        e.stopPropagation(); 
-                        startEditing(message); 
-                      }}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter text-text-primary hover:bg-accent hover:text-white transition-colors cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); startEditing(message); }}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-tighter text-text-primary hover:bg-accent hover:text-white transition-colors cursor-pointer"
                     >
                       ✎ Edit
                     </button>
                     <div className="w-[1px] h-3 bg-border"></div>
                     <button
-                      onClick={(e) => { 
-                        e.preventDefault();
-                        e.stopPropagation();
-                        // ALWAYS use currentId (id or created_at)
-                        onDeleteMessage(currentId); 
-                      }}
-                      className="flex items-center justify-center w-8 h-7 rounded-full text-text-muted hover:text-rose-500 hover:bg-rose-50/10 transition-all cursor-pointer"
-                      title="Delete this message"
+                      onClick={(e) => { e.stopPropagation(); onDeleteMessage(message.id!); }}
+                      className="flex items-center justify-center w-7 h-7 rounded-full text-text-muted hover:text-rose-500 transition-colors cursor-pointer"
                     >
-                      <span className="text-sm font-bold">✕</span>
+                      <span className="text-[10px]">✕</span>
                     </button>
                   </div>
                 )}
@@ -98,7 +87,7 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
                 {isEditing ? (
                   <div className="flex flex-col gap-3 min-w-[280px]">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase text-white/50 tracking-widest">Editor Mode</span>
+                      <span className="text-[10px] font-black uppercase text-white/50 tracking-widest">Editing Message</span>
                       <button onClick={() => setEditingId(null)} className="text-[10px] text-white/40 hover:text-white cursor-pointer">Cancel</button>
                     </div>
                     <textarea

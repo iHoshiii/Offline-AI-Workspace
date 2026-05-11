@@ -128,3 +128,8 @@ async def list_all_memories() -> list[dict[str, Any]]:
     query = "SELECT chat_id, content, embedding FROM memories"
     rows = await _execute(query, fetch_all=True)
     return [dict(row) for row in rows]
+
+async def clear_all_memories() -> bool:
+    query = "DELETE FROM memories"
+    await _execute(query)
+    return True

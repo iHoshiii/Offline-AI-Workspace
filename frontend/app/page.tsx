@@ -278,6 +278,16 @@ export default function HomePage() {
     }
   };
 
+  const clearAllMemories = async () => {
+    try {
+      await fetch(`${API_BASE}/chat/memories`, { method: 'DELETE' });
+      setError('All semantic memories wiped successfully.');
+      setTimeout(() => setError(null), 3000);
+    } catch {
+      setError('Failed to wipe memories.');
+    }
+  };
+
   return (
     <main className="min-h-screen bg-surface text-slate-100">
       <div className="mx-auto flex h-screen max-w-[1600px] gap-6 overflow-hidden px-4 py-5 sm:px-6">
@@ -289,6 +299,7 @@ export default function HomePage() {
           onDeleteConversation={deleteConversation}
           onRenameConversation={renameConversation}
           onSummarizeConversation={summarizeConversation}
+          onClearMemories={clearAllMemories}
         />
         <section className="flex flex-1 flex-col rounded-[32px] border border-slate-800 bg-surface3 shadow-premium glass-effect">
           <div className="border-b border-slate-800 px-6 py-5">

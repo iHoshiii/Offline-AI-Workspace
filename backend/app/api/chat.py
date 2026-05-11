@@ -1,7 +1,7 @@
 import json
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
-from app.db.sqlite_client import append_message, create_chat, delete_chat, get_chat, get_messages, list_chats, update_chat_title
+from app.db.sqlite_client import append_message, clear_all_memories, create_chat, delete_chat, delete_message, get_chat, get_messages, list_chats, update_chat_title
 from app.schemas.chat import ChatRequest, ChatSummary, ConversationDetail, UpdateChatRequest
 from app.services.ollama_client import ollama_client
 from app.services.memory_service import memory_service
@@ -133,3 +133,8 @@ async def summarize_conversation(chat_id: int):
     
     summary = await ollama_client.get_completion(prompt, temperature=0.3, max_tokens=300)
     return {"summary": summary.strip()}
+
+@router.delete("/memories")
+async def clear_memories():
+    await clear_all_memories()
+    return {"status": "success", "message": "All semantic memories have been wiped."}

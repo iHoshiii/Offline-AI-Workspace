@@ -61,26 +61,42 @@ export default function HomePage() {
   };
 
   const fetchConversations = () => {
-    fetch(`${API_BASE}/chat/conversations`)
+    fetch(`${API_BASE}/chat/conversations?t=${Date.now()}`)
       .then((res) => res.json())
       .then((data) => setConversations(data))
       .catch(() => setConversations([]));
   };
 
   const fetchMessages = (chatId: number) => {
-    fetch(`${API_BASE}/chat/conversations/${chatId}`)
+    if (!chatId) return;
+    fetch(`${API_BASE}/chat/conversations/${chatId}?t=${Date.now()}`)
       .then((res) => res.json())
       .then((data) => {
         if (data?.messages) {
+          console.log('Fetched messages for sync:', data.messages);
           setMessages(data.messages);
         }
       })
-      .catch(() => setError('Failed to load messages.'));
+      .catch((err) => {
+        console.error('Fetch error:', err);
+        setError('Failed to load messages.');
+      });
   };
 
   useEffect(() => {
     fetchConversations();
   }, []);
+
+  // Safety valve: Clear stuck syncing labels automatically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const hasUnsynced = messages.some(m => m.id === undefined || m.id === null);
+      if (hasUnsynced && activeChatId && !typingChatId) {
+        fetchMessages(activeChatId);
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [messages, activeChatId, typingChatId]);
 
   useEffect(() => {
     const handleUpload = async (e: any) => {
@@ -140,11 +156,6 @@ export default function HomePage() {
     return () => window.removeEventListener('upload-file', handleUpload);
   }, [activeChatId]);
 
-  const activeConversation = useMemo(
-    () => conversations.find((conversation) => conversation.id === activeChatId) ?? null,
-    [conversations, activeChatId],
-  );
-
   const stopGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -166,10 +177,8 @@ export default function HomePage() {
     setDraft('');
     setTypingChatId(activeChatId);
 
-    // Initialize AbortController
     const controller = new AbortController();
     abortControllerRef.current = controller;
-
     let lastChatId = activeChatId;
 
     try {
@@ -249,12 +258,7 @@ export default function HomePage() {
                 return newMsgs;
               });
             }
-            if (payload.type === 'error') {
-              setError(payload.message ?? 'Unknown backend error');
-            }
-          } catch {
-            continue;
-          }
+          } catch { continue; }
         }
       }
       
@@ -262,11 +266,7 @@ export default function HomePage() {
       
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        console.log('Stream aborted');
-        // Give the backend a small window to finish saving the partial message
-        setTimeout(() => {
-          if (lastChatId) fetchMessages(lastChatId);
-        }, 500);
+        setTimeout(() => { if (lastChatId) fetchMessages(lastChatId); }, 800);
       } else {
         setError(err.message ?? 'Unable to connect to backend.');
       }
@@ -276,43 +276,18 @@ export default function HomePage() {
     }
   };
 
-  const createNewConversation = () => {
-    setActiveChatId(null);
-    setMessages([]);
-    setDraft('');
-  };
-
   const selectConversation = async (conversationId: number) => {
-    setError(null);
     setActiveChatId(conversationId);
     fetchMessages(conversationId);
   };
 
-  const deleteConversation = async (conversationId: number) => {
+  const deleteMessage = async (messageId: number) => {
+    if (!activeChatId || !messageId) return;
     try {
-      await fetch(`${API_BASE}/chat/conversations/${conversationId}`, { method: 'DELETE' });
-      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
-      if (activeChatId === conversationId) {
-        setActiveChatId(null);
-        setMessages([]);
-      }
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, { method: 'DELETE' });
     } catch {
-      setError('Failed to delete conversation.');
-    }
-  };
-
-  const renameConversation = async (conversationId: number, newTitle: string) => {
-    try {
-      await fetch(`${API_BASE}/chat/conversations/${conversationId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTitle }),
-      });
-      setConversations((prev) =>
-        prev.map((c) => (c.id === conversationId ? { ...c, title: newTitle } : c)),
-      );
-    } catch {
-      setError('Failed to rename conversation.');
+      if (activeChatId) fetchMessages(activeChatId);
     }
   };
 
@@ -324,68 +299,10 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: newContent }),
       });
-      
       if (!res.ok) throw new Error('Edit failed');
-
-      setMessages((prev) => 
-        prev.map((m) => (m.id === messageId ? { ...m, content: newContent } : m))
-      );
-    } catch (err) {
-      setError('Failed to update message. Re-syncing...');
-      if (activeChatId) fetchMessages(activeChatId);
-    }
-  };
-
-  const deleteMessage = async (messageId: number) => {
-    if (!activeChatId || !messageId) return;
-    
-    try {
-      setMessages((prev) => prev.filter((m) => m.id !== messageId));
-      
-      const res = await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, {
-        method: 'DELETE',
-      });
-      
-      if (!res.ok) throw new Error('Delete failed');
-    } catch (err) {
-      setError('Failed to delete message. Re-syncing...');
-      if (activeChatId) fetchMessages(activeChatId);
-    }
-  };
-
-  const summarizeConversation = async (conversationId: number) => {
-    setTypingChatId(conversationId);
-    setMessages((prev) => [...prev, { 
-      role: 'assistant', 
-      content: '⏳ Summarizing conversation...', 
-      created_at: new Date().toISOString() 
-    }]);
-
-    try {
-      const response = await fetch(`${API_BASE}/chat/conversations/${conversationId}/summarize`, {
-        method: 'POST',
-      });
-      const data = await response.json();
-      if (data.summary) {
-        fetchMessages(conversationId);
-      } else {
-        throw new Error('Summary not found.');
-      }
-    } catch (err) {
-      setError('Failed to summarize conversation.');
-      setMessages((prev) => prev.slice(0, -1));
-    } finally {
-      setTypingChatId(null);
-    }
-  };
-
-  const clearAllMemories = async () => {
-    try {
-      await fetch(`${API_BASE}/chat/memories`, { method: 'DELETE' });
-      setError('All semantic memories wiped successfully.');
-      setTimeout(() => setError(null), 3000);
+      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: newContent } : m)));
     } catch {
-      setError('Failed to wipe memories.');
+      if (activeChatId) fetchMessages(activeChatId);
     }
   };
 
@@ -397,18 +314,46 @@ export default function HomePage() {
             conversations={conversations}
             activeConversationId={activeChatId}
             onSelectConversation={selectConversation}
-            onCreateConversation={createNewConversation}
-            onDeleteConversation={deleteConversation}
-            onRenameConversation={renameConversation}
-            onSummarizeConversation={summarizeConversation}
-            onClearMemories={clearAllMemories}
+            onCreateConversation={() => { setActiveChatId(null); setMessages([]); }}
+            onDeleteConversation={async (id) => {
+              await fetch(`${API_BASE}/chat/conversations/${id}`, { method: 'DELETE' });
+              setConversations(prev => prev.filter(c => c.id !== id));
+              if (activeChatId === id) { setActiveChatId(null); setMessages([]); }
+            }}
+            onRenameConversation={async (id, title) => {
+              await fetch(`${API_BASE}/chat/conversations/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title }),
+              });
+              setConversations(prev => prev.map(c => c.id === id ? { ...c, title } : c));
+            }}
+            onSummarizeConversation={async (id) => {
+              fetchMessages(id);
+            }}
+            onClearMemories={async () => {
+              await fetch(`${API_BASE}/chat/memories`, { method: 'DELETE' });
+            }}
             onOpenMemoryManager={() => setIsMemoryManagerOpen(true)}
             onOpenSettings={() => setIsSettingsOpen(true)}
           />
           <section className="flex flex-1 flex-col rounded-[32px] border border-border bg-surface shadow-premium glass-effect">
-            <div className="border-b border-border px-6 py-5">
-              <h2 className="text-lg font-semibold text-text-primary">Chat</h2>
-              <p className="mt-1 text-sm text-text-muted">Streaming responses, markdown rendering, and local message persistence.</p>
+            <div className="border-b border-border px-6 py-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-text-primary">Chat</h2>
+                <p className="mt-1 text-sm text-text-muted">Local & Private Offline Workspace</p>
+              </div>
+              {activeChatId && (
+                <button 
+                  onClick={() => fetchMessages(activeChatId)}
+                  className="p-2.5 rounded-xl hover:bg-surface2 text-text-muted hover:text-accent transition-all cursor-pointer group"
+                  title="Force Sync with Database"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-active:rotate-180 transition-transform duration-500">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
+                  </svg>
+                </button>
+              )}
             </div>
             <div className="flex flex-1 flex-col overflow-hidden">
               <ChatWindow 
@@ -430,17 +375,8 @@ export default function HomePage() {
             </div>
           </section>
         </div>
-        <MemoryManager 
-          isOpen={isMemoryManagerOpen} 
-          onClose={() => setIsMemoryManagerOpen(false)} 
-          apiBase={API_BASE} 
-        />
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          theme={theme}
-          onThemeChange={toggleTheme}
-        />
+        <MemoryManager isOpen={isMemoryManagerOpen} onClose={() => setIsMemoryManagerOpen(false)} apiBase={API_BASE} />
+        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} theme={theme} onThemeChange={toggleTheme} />
       </main>
     </div>
   );

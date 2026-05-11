@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { marked } from 'marked';
 
 type Message = {
@@ -24,9 +24,10 @@ const FileIcon = () => (
 export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage }: ChatWindowProps) {
   const [editingId, setEditingId] = useState<any>(null);
   const [editContent, setEditContent] = useState('');
+  const [syncProgress, setSyncProgress] = useState<Record<string, number>>({});
 
   const startEditing = (message: Message) => {
-    if (!message.id) return; // Wait for sync
+    if (message.id === undefined || message.id === null) return; 
     setEditingId(message.id);
     setEditContent(message.content);
   };
@@ -38,14 +39,37 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
     setEditingId(null);
   };
 
+  // Simulated high-speed sync progress for "feel"
+  useEffect(() => {
+    const syncingMessages = messages.filter(m => m.id === undefined || m.id === null);
+    if (syncingMessages.length > 0) {
+      const interval = setInterval(() => {
+        setSyncProgress(prev => {
+          const next = { ...prev };
+          syncingMessages.forEach(m => {
+            const key = m.created_at;
+            if (!next[key]) next[key] = 0;
+            if (next[key] < 99) {
+              next[key] += Math.floor(Math.random() * 30) + 10;
+              if (next[key] > 99) next[key] = 99;
+            }
+          });
+          return next;
+        });
+      }, 80);
+      return () => clearInterval(interval);
+    }
+  }, [messages]);
+
   return (
     <div className="flex h-full flex-col gap-4 overflow-hidden px-4 py-5 sm:px-6">
       <div className="space-y-6 overflow-y-auto pr-2">
         {messages.map((message, index) => {
           const isUser = message.role === 'user';
-          const isSyncing = !message.id;
+          const isSyncing = message.id === undefined || message.id === null;
           const isEditing = editingId && editingId == message.id;
           const isFileMessage = message.content.includes('📄') || message.content.includes('✅ Document');
+          const progress = syncProgress[message.created_at] || 0;
 
           return (
             <div 
@@ -57,7 +81,12 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
                 <span>{isUser ? 'You' : 'AI Assistant'}</span>
                 <span className="opacity-30">•</span>
                 <span>{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                {isSyncing && <span className="ml-2 text-accent animate-pulse">Syncing...</span>}
+                {isSyncing && (
+                  <span className="ml-2 flex items-center gap-1 text-accent animate-pulse">
+                    <span className="font-black italic">Saving locally...</span>
+                    <span className="bg-accent/10 px-1.5 py-0.5 rounded text-[8px]">{progress}%</span>
+                  </span>
+                )}
               </div>
 
               <div className={`max-w-[85%] min-w-[160px] rounded-[24px] p-5 shadow-premium border relative transition-all group-hover:shadow-xl ${
@@ -65,7 +94,7 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
                   ? 'bg-accent text-white border-accent/20' 
                   : 'bg-surface2 text-text-primary border-border'
               }`}>
-                {/* Floating Action Pill - Only shows when synced */}
+                {/* Floating Action Pill */}
                 {!isEditing && !isSyncing && (
                   <div className="absolute -top-3 right-4 flex items-center gap-1 bg-surface3 border border-border rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 z-20">
                     <button
@@ -87,7 +116,7 @@ export function ChatWindow({ messages, isTyping, onDeleteMessage, onEditMessage 
                 {isEditing ? (
                   <div className="flex flex-col gap-3 min-w-[280px]">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase text-white/50 tracking-widest">Editing Message</span>
+                      <span className="text-[10px] font-black uppercase text-white/50 tracking-widest">Editing Mode</span>
                       <button onClick={() => setEditingId(null)} className="text-[10px] text-white/40 hover:text-white cursor-pointer">Cancel</button>
                     </div>
                     <textarea

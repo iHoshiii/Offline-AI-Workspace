@@ -26,6 +26,8 @@ type ChatChunk = {
   text?: string;
   chat_id?: number;
   message?: string;
+  user_message_id?: number;
+  message_id?: number;
 };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -56,11 +58,26 @@ export default function HomePage() {
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
-  useEffect(() => {
+  const fetchConversations = () => {
     fetch(`${API_BASE}/chat/conversations`)
       .then((res) => res.json())
       .then((data) => setConversations(data))
       .catch(() => setConversations([]));
+  };
+
+  const fetchMessages = (chatId: number) => {
+    fetch(`${API_BASE}/chat/conversations/${chatId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.messages) {
+          setMessages(data.messages);
+        }
+      })
+      .catch(() => setError('Failed to load messages.'));
+  };
+
+  useEffect(() => {
+    fetchConversations();
   }, []);
 
   useEffect(() => {
@@ -71,15 +88,22 @@ export default function HomePage() {
         return;
       }
 
-      const formData = new FormData();
-      formData.append('file', file);
+      // Add a User message showing the file being sent (Temporary placeholder)
+      setMessages((prev) => [...prev, { 
+        role: 'user', 
+        content: `📄 **Attached File:** ${file.name}`,
+        created_at: new Date().toISOString()
+      }]);
 
-      // Add a temporary processing message
+      // Add a temporary processing message from Assistant
       setMessages((prev) => [...prev, { 
         role: 'assistant', 
         content: `⏳ Processing "${file.name}"... please wait.`,
         created_at: new Date().toISOString()
       }]);
+
+      const formData = new FormData();
+      formData.append('file', file);
 
       try {
         const res = await fetch(`${API_BASE}/chat/conversations/${activeChatId}/upload`, {
@@ -88,14 +112,8 @@ export default function HomePage() {
         });
         const data = await res.json();
         if (data.status === 'success') {
-          setMessages((prev) => [
-            ...prev.slice(0, -1), // Remove the "Processing..." message
-            { 
-              role: 'assistant', 
-              content: `✅ Document "${file.name}" has been processed and added to this chat's memory.`,
-              created_at: new Date().toISOString()
-            }
-          ]);
+          // Fetch full messages to get the real IDs and the new assistant message
+          fetchMessages(activeChatId);
         } else {
           setMessages((prev) => [
             ...prev.slice(0, -1),
@@ -155,6 +173,7 @@ export default function HomePage() {
       const decoder = new TextDecoder();
       let buffer = '';
       let assistantDraft = '';
+      let lastChatId = activeChatId;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -169,14 +188,27 @@ export default function HomePage() {
 
           try {
             const payload = JSON.parse(line) as ChatChunk;
-            if (payload.type === 'meta' && typeof payload.chat_id === 'number') {
-              const chatId = payload.chat_id;
-              setActiveChatId(chatId);
-              setTypingChatId(chatId);
-              setConversations((prev) => {
-                if (prev.some((item) => item.id === chatId)) return prev;
-                return [{ id: chatId, title: userMessage.content.slice(0, 80) }, ...prev];
-              });
+            if (payload.type === 'meta') {
+              if (typeof payload.chat_id === 'number') {
+                lastChatId = payload.chat_id;
+                setActiveChatId(lastChatId);
+                setTypingChatId(lastChatId);
+                setConversations((prev) => {
+                  if (prev.some((item) => item.id === lastChatId)) return prev;
+                  return [{ id: lastChatId!, title: userMessage.content.slice(0, 80) }, ...prev];
+                });
+              }
+              // Set the User message ID immediately!
+              if (payload.user_message_id) {
+                setMessages((prev) => {
+                  const newMsgs = [...prev];
+                  const lastUserIdx = newMsgs.map(m => m.role).lastIndexOf('user');
+                  if (lastUserIdx !== -1) {
+                    newMsgs[lastUserIdx] = { ...newMsgs[lastUserIdx], id: payload.user_message_id };
+                  }
+                  return newMsgs;
+                });
+              }
             }
             if (payload.type === 'chunk' && payload.text) {
               assistantDraft += payload.text;
@@ -194,6 +226,17 @@ export default function HomePage() {
                 return [...prev, nextMessage];
               });
             }
+            if (payload.type === 'done' && payload.message_id) {
+              // Finalize the assistant message ID!
+              setMessages((prev) => {
+                const newMsgs = [...prev];
+                const lastAsstIdx = newMsgs.map(m => m.role).lastIndexOf('assistant');
+                if (lastAsstIdx !== -1) {
+                  newMsgs[lastAsstIdx] = { ...newMsgs[lastAsstIdx], id: payload.message_id };
+                }
+                return newMsgs;
+              });
+            }
             if (payload.type === 'error') {
               setError(payload.message ?? 'Unknown backend error');
             }
@@ -202,6 +245,10 @@ export default function HomePage() {
           }
         }
       }
+      
+      // Full sync just to be safe
+      if (lastChatId) fetchMessages(lastChatId);
+      
     } catch (err) {
       setError((err as Error).message ?? 'Unable to connect to backend.');
     } finally {
@@ -218,15 +265,7 @@ export default function HomePage() {
   const selectConversation = async (conversationId: number) => {
     setError(null);
     setActiveChatId(conversationId);
-    try {
-      const response = await fetch(`${API_BASE}/chat/conversations/${conversationId}`);
-      const data = await response.json();
-      if (data?.messages) {
-        setMessages(data.messages);
-      }
-    } catch {
-      setError('Failed to load conversation.');
-    }
+    fetchMessages(conversationId);
   };
 
   const deleteConversation = async (conversationId: number) => {
@@ -257,6 +296,34 @@ export default function HomePage() {
     }
   };
 
+  const editMessage = async (messageId: number, newContent: string) => {
+    if (!activeChatId) return;
+    try {
+      await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newContent }),
+      });
+      setMessages((prev) => 
+        prev.map((m) => (m.id === messageId ? { ...m, content: newContent } : m))
+      );
+    } catch {
+      setError('Failed to update message.');
+    }
+  };
+
+  const deleteMessage = async (messageId: number) => {
+    if (!activeChatId || !messageId) return;
+    try {
+      await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, {
+        method: 'DELETE',
+      });
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    } catch {
+      setError('Failed to delete message.');
+    }
+  };
+
   const summarizeConversation = async (conversationId: number) => {
     setTypingChatId(conversationId);
     setMessages((prev) => [...prev, { 
@@ -271,14 +338,7 @@ export default function HomePage() {
       });
       const data = await response.json();
       if (data.summary) {
-        setMessages((prev) => [
-          ...prev.slice(0, -1),
-          { 
-            role: 'assistant', 
-            content: `### 📝 Chat Summary\n\n${data.summary}`, 
-            created_at: new Date().toISOString() 
-          }
-        ]);
+        fetchMessages(conversationId);
       } else {
         throw new Error('Summary not found.');
       }
@@ -287,17 +347,6 @@ export default function HomePage() {
       setMessages((prev) => prev.slice(0, -1));
     } finally {
       setTypingChatId(null);
-    }
-  };
-  const deleteMessage = async (messageId: number) => {
-    if (!activeChatId) return;
-    try {
-      await fetch(`${API_BASE}/chat/conversations/${activeChatId}/messages/${messageId}`, {
-        method: 'DELETE',
-      });
-      setMessages((prev) => prev.filter((m) => m.id !== messageId));
-    } catch {
-      setError('Failed to delete message.');
     }
   };
 
@@ -336,7 +385,8 @@ export default function HomePage() {
               <ChatWindow 
                 messages={messages} 
                 isTyping={typingChatId !== null && typingChatId === activeChatId} 
-                onDeleteMessage={deleteMessage} 
+                onDeleteMessage={deleteMessage}
+                onEditMessage={editMessage}
               />
               <div className="border-t border-border px-6 pb-6 pt-4">
                 {error ? <p className="mb-3 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p> : null}

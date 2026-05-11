@@ -138,3 +138,8 @@ async def clear_all_memories() -> bool:
     query = "DELETE FROM memories"
     await _execute(query)
     return True
+
+async def update_message(message_id: int, content: str) -> bool:
+    query = "UPDATE messages SET content = ? WHERE id = ?"
+    await _execute(query, (content, message_id))
+    return True

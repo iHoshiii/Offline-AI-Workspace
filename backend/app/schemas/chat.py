@@ -27,3 +27,6 @@ class UpdateChatRequest(BaseModel):
 
 class SummarizeResponse(BaseModel):
     summary: str
+
+class UpdateMessageRequest(BaseModel):
+    content: str = Field(..., min_length=1)

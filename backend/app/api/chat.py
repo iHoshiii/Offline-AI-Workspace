@@ -4,8 +4,9 @@ from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
 from app.db.sqlite_client import append_message, clear_all_memories, create_chat, delete_chat, delete_message, delete_memory, get_chat, get_messages, list_chats, list_all_memories, update_chat_title, update_message
 from app.schemas.chat import ChatRequest, UpdateChatRequest, UpdateMessageRequest
-from app.services import document_service, memory_service
-from app.api import ollama_client
+from app.services.document_service import document_service
+from app.services.memory_service import memory_service
+from app.services.ollama_client import ollama_client
 
 router = APIRouter(prefix="/chat")
 
